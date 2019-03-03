@@ -1,0 +1,7 @@
+*.o
+*.log
+*.vra
+*.cgr
+*.csv
+*.map
+*.swp
