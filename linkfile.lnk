@@ -5,3 +5,4 @@ gamepads.o
 grid.o
 sprites.o
 puzzles.o
+text.o

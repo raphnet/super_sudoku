@@ -153,14 +153,14 @@ ClearVRAM_next\@:
 .endm
 
 
-.macro pusha
+.macro pushall
 	pha
 	phx
 	phy
 	php
 .endm
 
-.macro popa
+.macro popall
 	plp
 	ply
 	plx

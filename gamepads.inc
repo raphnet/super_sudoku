@@ -34,4 +34,7 @@
 ;.define CTL_WORD1_KP_		$0200
 .define CTL_WORD1_KP_END	$0100
 
+.define CTL_ID_STANDARD		0
+.define CTL_ID_NTT_KEYPAD	4
+
 

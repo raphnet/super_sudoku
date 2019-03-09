@@ -39,13 +39,13 @@ effects_dovblank:
 	; Initialize the non blocking effect helper
 	;
 effects_init:
-	pusha
+	pushall
 
 	A16
 	lda #_effects_nop
 	sta effects_cur_routine
 
-	popa
+	popall
 	rts
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -55,7 +55,7 @@ effects_init:
 	; Not bad to signal errors. Similar to a visual bell.
 	;
 effect_mosaic_pulse:
-	pusha
+	pushall
 
 	A16
 	lda #_effects_mosaic_do
@@ -66,7 +66,7 @@ effect_mosaic_pulse:
 	lda #1
 	sta effects_mosaic_bgmask
 
-	popa
+	popall
 	rts
 
 
@@ -83,7 +83,7 @@ _effects_nop:
 	; Internal function for the mosaic pulse effect.
 	;
 _effects_mosaic_do:
-	pusha
+	pushall
 
 	A8
 
@@ -126,7 +126,7 @@ _effects_mosaic_do:
 
 @done:
 
-	popa
+	popall
 	rts
 
 

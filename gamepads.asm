@@ -2,6 +2,7 @@
 .include "snesregs.inc"
 .include "misc_macros.inc"
 .include "zeropage.inc"
+.include "gamepads.inc"
 
 .16BIT
 
@@ -116,25 +117,38 @@ readGamepad2byte:
 	;
 	; Bytes stored in gamepad1_bytes[4]
 readGamepad1:
-	pha
-	phx
-	php
+	pushall
 
 	A8
 	XY8
 
+	; First 16 bits
 	ldx #0.B
 	jsr readGamepad1byte
 	inx
 	jsr readGamepad1byte
 	inx
+
+	; Check the ID bits, decide if more bits shall be read
+	jsr extractIdBits1
+	lda ctl_id_p1
+	cmp #CTL_ID_NTT_KEYPAD
+	beq @read_more
+
+	; Otherwise, zero extra bytes in array
+	stz gamepad1_bytes, X
+	inx
+	stz gamepad1_bytes, X
+	bra @done
+
+@read_more:
 	jsr readGamepad1byte
 	inx
 	jsr readGamepad1byte
 
-	plp
-	plx
-	pla
+@done:
+
+	popall
 	rts
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -144,22 +158,34 @@ readGamepad1:
 	;
 	; Bytes stored in gamepad2_bytes[4]
 readGamepad2:
-	pha
-	phx
-	php
+	pushall
 
 	ldx #0.B
 	jsr readGamepad2byte
 	inx
 	jsr readGamepad2byte
 	inx
+
+	jsr extractIdBits2
+	lda ctl_id_p2
+	cmp #CTL_ID_NTT_KEYPAD
+	beq @read_more
+
+	; Otherwise, zero extra bytes in array
+	stz gamepad2_bytes, X
+	inx
+	stz gamepad2_bytes, X
+	bra @done
+
+@read_more:
 	jsr readGamepad2byte
 	inx
 	jsr readGamepad2byte
 
-	plp
-	plx
-	pla
+@done:
+
+	popall
+
 	rts
 
 
@@ -169,9 +195,7 @@ readGamepad2:
 	; since last call.
 	;
 gamepad1_detectEvents:
-	pha
-	phx
-	php
+	pushall
 
 	A16
 	XY16
@@ -184,7 +208,7 @@ gamepad1_detectEvents:
 	sta gamepad1_pressed	; Save new 'active' buttons
 	stx gamepad1_prev_bytes	; Save previous state for next pass
 
-	; TODO : Repeat for extra bits
+
 	lda gamepad1_bytes+2
 	tax
 	eor gamepad1_prev_bytes+2
@@ -193,9 +217,7 @@ gamepad1_detectEvents:
 	sta gamepad1_pressed+2
 	stx gamepad1_prev_bytes+2
 
-	plp
-	plx
-	pla
+	popall
 
 	rts
 
@@ -206,27 +228,67 @@ gamepad1_detectEvents:
 	; since last call.
 	;
 gamepad2_detectEvents:
-	; TODO
+	pushall
+
+	A16
+	XY16
+
+	lda gamepad2_bytes
+	tax
+	eor gamepad2_prev_bytes
+	and gamepad2_bytes
+	ora gamepad2_pressed
+	sta gamepad2_pressed
+	stx gamepad2_prev_bytes
+
+	lda gamepad2_bytes+2
+	tax
+	eor gamepad2_prev_bytes+2
+	and gamepad2_bytes+2
+	ora gamepad2_pressed+2
+	sta gamepad2_pressed+2
+	stx gamepad2_prev_bytes+2
+
+	popall
+
 	rts
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	; Extract the ID bytes from gamepadX_bytes and store them
-	; in ctl_id_p1/p2.
+	; Extract the ID bytes from gamepad1_bytes and store them
+	; in ctl_id_p1.
 	;
-	; Assumes AXY 8 bit
-extractIdBits:
+extractIdBits1:
 	pha
+	php
 
-	lda gamepad1_bytes+2
+	A8
+
+	lda gamepad1_bytes+1
 	and #$F
 	sta ctl_id_p1
 
-	lda gamepad2_bytes+2
+	plp
+	pla
+	rts
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	; Extract the ID bytes from gamepad2_bytes and store them
+	; in ctl_id_p2.
+	;
+extractIdBits2:
+	pha
+	php
+
+	A8
+
+	lda gamepad2_bytes+1
 	and #$F
 	sta ctl_id_p2
 
+	plp
 	pla
 	rts
+
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	; Read 32 bits from both gamepads
@@ -240,10 +302,10 @@ readGamepads:
 	jsr gamepads_delay_8nops
 	; The shift in 32 bits from each controller
 	jsr readGamepad1
-	;jsr readGamepad2
+	jsr readGamepad2
 	; Compute button events (falling edge)
 	jsr gamepad1_detectEvents
-	;jsr gamepad2_detectEvents
+	jsr gamepad2_detectEvents
 	rts
 
 
@@ -251,10 +313,7 @@ readGamepads:
 	; Initialize gamepad variables.
 	;
 gamepads_init:
-	pha
-	phx
-	php
-
+	pushall
 	A16
 
 	stz gamepad1_prev_bytes
@@ -267,10 +326,60 @@ gamepads_init:
 	stz gamepad2_pressed
 	stz gamepad2_pressed + 2
 
-	plp
-	plx
-	pla
+	popall
 
+	rts
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Get last event from port 1
+	;
+	; X: Index into gamepad1_pressed
+	;
+	; Returns data in A
+	;
+gamepads_p1_getEvents:
+	lda gamepad1_pressed,X
+	rts
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Clear events for controller port 1
+	;
+gamepads_p1_clearEvents:
+	pha
+	php
+	A16
+	stz gamepad1_pressed
+	stz gamepad1_pressed + 2
+	plp
+	pla
+	rts
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Get last event from port 2
+	;
+	; X: Index into gamepad2_pressed
+	;
+	; Returns data in A
+	;
+gamepads_p2_getEvents:
+	lda gamepad2_pressed,X
+	rts
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Clear events for controller port 2
+	;
+gamepads_p2_clearEvents:
+	pha
+	php
+	A16
+	stz gamepad2_pressed
+	stz gamepad2_pressed + 2
+	plp
+	pla
 	rts
 
 

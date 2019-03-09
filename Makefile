@@ -4,10 +4,10 @@ EMULATOR=bsnes
 PNG2SNES=png2snes -q
 
 # Files included by main.asm. When they change, recompilation must be triggered.
-DEPS=snesregs.inc misc_macros.inc header.inc snes_init.asm 
+DEPS=snesregs.inc misc_macros.inc header.inc snes_init.asm text.inc
 
 # note: New objects must also be added to linkfile.lnk
-OBJS=main.o effects.o gamepads.o grid.o puzzles.o sprites.o
+OBJS=main.o effects.o gamepads.o grid.o puzzles.o sprites.o text.o
 
 ROMFILE=sudoku2019.sfc
 

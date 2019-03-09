@@ -3,16 +3,14 @@
 .include "snesregs.inc"
 .include "misc_macros.inc"
 .include "zeropage.inc"
-.include "controllerbits.inc"
+.include "gamepads.inc"
+.include "text.inc"
 
 .define GRID_PITCH	16	; not used. Shifts hardcoded in cursor_gridToScreen
 ; Offset for position displaying the cursor centered on 0,0
 .define CURSOR_ORIGIN_X	16
 .define CURSOR_ORIGIN_Y	47
 .define GRID_WIDTH	9
-
-.define CTL_ID_STANDARD		0
-.define CTL_ID_NTT_KEYPAD	4
 
 .16BIT
 
@@ -37,6 +35,11 @@ cursor_grid_y: dw
 grid_changed: db ; When non-zero, causes grid_syncToScreen to be called at vblank
 
 tmp_hint_value: dw
+
+; Pointers to gamepads_pX_getEvents and gamepads_pX_clearEvents. Set
+; depending on which controller pad is used to press B at title.
+fn_getEvents: dw
+fn_clearEvents: dw
 
 .ENDS
 
@@ -226,11 +229,13 @@ Start:
 
 	stz CGADSUB
 
+	;;; text functions init
+	jsr text_init
+
 	;;; Effect engine
 	jsr effects_init
 
 	;;; Sprites
-
 	jsr sprites_init
 
 	; sssnnbbb   s: Object size  n: name selection  b: base selection
@@ -297,25 +302,71 @@ title_screen:
 	; BG3
 	Fill_VRAM BG3_TILE_MAP_OFFSET ((1<<BGMAPENT_PALSHIFT)|0|$0000) 	32*32
 
+	A16
+	XY16
+
+	ldx #0
+	ldy #0
+	jsr text_gotoxy
+
+	lda #'H'
+	jsr text_putchar
+
+	ldx #5
+	ldy #20
+	jsr text_gotoxy
+
+	text_drawString "PRESS B TO START"
 
 	; Disable forced blanking (clear bit 7)
 	; Start with master brightness at 0 (black)
 	; for upcoming fade-in
+	A8
 	stz INIDISP
-
 
 	; Perform fadein
 	jsr effect_fadein
 
 
-	; Now stay here until start is pressed.
+	; Now stay here until B is pressed. This first button press
+	; is used to choose which controller port will be used from there.
 @title_loop
 	wai
-	A16
-	lda gamepad1_pressed.W
-	and #CTL_WORD0_START
-	beq @title_loop
 
+	A16
+	XY16
+
+	ldx #0
+	jsr gamepads_p1_getEvents
+	and #CTL_WORD0_B
+	bne @p1
+
+	jsr gamepads_p2_getEvents
+	and #CTL_WORD0_B
+	bne @p2
+
+	bra @title_loop
+
+
+@p1:
+	lda #gamepads_p1_getEvents
+	sta fn_getEvents
+	lda #gamepads_p1_clearEvents
+	sta fn_clearEvents
+	bra @controller_select_done
+@p2:
+	lda #gamepads_p2_getEvents
+	sta fn_getEvents
+	lda #gamepads_p2_clearEvents
+	sta fn_clearEvents
+
+@controller_select_done:
+	; From this point on, functions must be called indirectly.
+	jsr clearEvents
+
+@title_step2:
+
+	; TODO : Menu
 
 grid_screen:
 	jsr effect_fadeout
@@ -392,7 +443,9 @@ processButtons:
 	A16
 	XY8
 
-	lda gamepad1_pressed.W
+	ldx #0 ; First word only
+	jsr getEvents ; returns 16 bits
+;	lda gamepad1_pressed.W
 
 
 	; Check for left/right buttons
@@ -453,7 +506,9 @@ processButtons:
 	; TODO : Only with NTT data keypad!
 
 	; Get the second word which contains numbers
-	lda gamepad1_pressed+2
+	ldx #2
+	jsr getEvents
+;	lda gamepad1_pressed+2
 	xba ; make the bits consecutive
 
 	ldx #0
@@ -474,8 +529,7 @@ processButtons:
 
 
 	; Clear event bits
-	stz gamepad1_pressed
-	stz gamepad1_pressed + 2
+	jsr clearEvents
 
 	; Update cursor destination on screen based on
 	; (new?) position on the grid
@@ -663,6 +717,15 @@ insertValueAtCursor
 	pla
 	rts
 
+
+getEvents:
+	jmp (fn_getEvents)
+
+clearEvents:
+	jmp (fn_clearEvents)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; RESOURCES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ZERO:
 	.db 2
