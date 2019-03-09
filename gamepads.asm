@@ -2,7 +2,27 @@
 .include "snesregs.inc"
 .include "misc_macros.inc"
 .include "zeropage.inc"
-.include "globals.inc"
+
+.16BIT
+
+.ramsection "gamepad vars" bank 0 slot RAM_SLOT
+	; Buffer for reading bytes from controllers. Logic can
+	; look at those to know the current button status. controlerbits.inc
+	; contains defines that can help masking buttons.
+	gamepad1_bytes: dsb 4
+	gamepad2_bytes: dsb 4
+	; "Button pressed" event bits. When a button goes down, the
+	; corresponding bit gets set here. Must be cleared manually.
+	gamepad1_pressed: dsb 4
+	gamepad2_pressed: dsb 4
+	; Buffers holding previously read values for edge detection and
+	; setting the gamepadX_pressed bits.
+	gamepad1_prev_bytes: dsb 4
+	gamepad2_prev_bytes: dsb 4
+	; Those contain the ID bits (cycles 12-16) for each controller;
+	ctl_id_p1: db
+	ctl_id_p2: db
+.ends
 
 .bank 0
 .section "Gamepads" FREE
@@ -165,6 +185,13 @@ gamepad1_detectEvents:
 	stx gamepad1_prev_bytes	; Save previous state for next pass
 
 	; TODO : Repeat for extra bits
+	lda gamepad1_bytes+2
+	tax
+	eor gamepad1_prev_bytes+2
+	and gamepad1_bytes+2
+	ora gamepad1_pressed+2
+	sta gamepad1_pressed+2
+	stx gamepad1_prev_bytes+2
 
 	plp
 	plx

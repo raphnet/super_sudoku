@@ -2,3 +2,6 @@
 main.o
 effects.o
 gamepads.o
+grid.o
+sprites.o
+puzzles.o

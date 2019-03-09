@@ -40,6 +40,9 @@
 
 ;macro for loading graphics data into the VRAM
 ;syntax LoadVRAM LABEL  VRAM_ADDRESS  SIZE
+;
+; Note: VRAM_ADDRESS is a byte address.
+;
 .macro LoadVRAM
 	pha
 	phx
@@ -52,7 +55,7 @@
 	sta VMAIN ; Set Word Write mode to VRAM (increment after $2119)
 
 	; Set VRAM address to VRAM_ADDRESS
-	ldx #\2
+	ldx #\2/2
 	stx VMADDL
 
 	lda #$01
@@ -78,7 +81,7 @@
 	pla
 .endm
 
-; syntax ClearVRAM VRAM_ADDRESS W_VALUE N_WORDS
+; syntax Fill_VRAM VRAM_ADDRESS W_VALUE N_WORDS
 .macro Fill_VRAM
 	pha
 	phx
@@ -89,7 +92,7 @@
 
 	lda #$80
 	sta VMAIN ; Set Word Write mode to VRAM (increment after $2119)
-	ldx #\1 ; $0400
+	ldx #\1/2
 	stx VMADDL ; Destination address
 
 	A16
@@ -172,7 +175,7 @@ ClearVRAM_next\@:
 	A16
 	lda $4216 ; read result
 	clc
-	adc #$0400 + \2
+	adc #$3000 + \2
 	tax
 
 	A16
@@ -215,10 +218,10 @@ skip\@:
 	phy
 	php
 	A8
-	XY8
-	ldx #\3 ; count
+	XY16
+	ldx #\3.W ; count
 	lda #\2 ; value
-	ldy #0 ; offset
+	ldy #0.W ; offset
 MemsetLoop\@:
 	sta \1, y ; Address + Y
 	iny
@@ -229,5 +232,29 @@ MemsetLoop\@:
 	ply
 	plx
 	pla
+.endm
+
+
+; Syntax: Memcpy dst src count
+.macro Memcpy
+	pha
+	phx
+	phy
+	php
+
+	A16
+	XY16
+	lda #(\3 -1).W
+	ldy #\1
+	ldx #\2
+
+	mvn
+
+	plp
+
+	ply
+	plx
+	pla
+
 .endm
 

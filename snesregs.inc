@@ -9,6 +9,27 @@
 ;
 .define INIDISP	$2100
 
+; OAM size register [OBSEL]
+; sssnnbbb
+;
+; s: Size
+; n: Name selection (upper 4k word addr)
+; b: Base selection (8k word seg. addr)
+.define OBSEL	$2101
+.define OBSEL_OBJSIZE_SHIFT	5
+
+; OAM address register [OAMADDL/OAMADDH]
+; aaaaaaaa r000000m
+;
+; a: OAM address.
+; r: OAM priority rotation.
+; m: OAM address MSB.
+.define OAMADDL	$2102
+.define OAMADDH $2103
+
+
+.define OAMDATA	$2104
+
 ; Screen mode register [BGMODE]
 ; abcdefff
 ;
@@ -20,13 +41,24 @@
 ; f: MODE definition.
 .define BGMODE $2105
 
+; Screen pixelation register [MOSAIC]
+; xxxxabcd
+;
+; x: Pixel size (0=Smallest, $F=Largest).
+; a: Affect BG4.
+; b: Affect BG3.
+; c: Affect BG2.
+; d: Affect BG1.
+;
+.define MOSAIC $2106
+
 ; BG1 VRAM location register [BG1SC]
 ; xxxxxxab
 ; x: Base address
 ; ab: SC size		(00: 32x32, 01: 64x32, 10: 32x64, 11: 64x64)
 .define BG1SC $2107
 .define BG2SC $2108
-.define BG3SC $2108
+.define BG3SC $2109
 .define BG4SC $210A
 
 ; BG1 & BG2 VRAM location register [BG12NBA]
@@ -98,9 +130,19 @@
 ; 0: GAmeport 2, pin 4 (JOY2)
 .define JOYB $4017
 
+; 8-bit multiplicand
+.define WRMPYA	$4202
+; 8-bit mutiplier and start
+.define WRMPYB	$4203
+
+
 ; DMA enable register [MDMAEN]
 .define MDMAEN	$420B
 
+; Unsigned Division Remainder / Multiply Product (lo.8bit) (R)
+.define RDMPYL	$4216
+; Unsigned Division Remainder / Multiply Product (up.8bit) (R)
+.define RDMPYH	$4217
 
 ; DMA Control register (channel 0)
 ; vh0cbaaa

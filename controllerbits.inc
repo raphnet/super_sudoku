@@ -17,14 +17,14 @@
 ; ID bits follow (3-0)
 
 ; NTT data keypad
-.define CTL_WORD1_KP_0	$80
-.define CTL_WORD1_KP_1	$40
-.define CTL_WORD1_KP_2	$20
-.define CTL_WORD1_KP_3	$10
-.define CTL_WORD1_KP_4	$08
-.define CTL_WORD1_KP_5	$04
-.define CTL_WORD1_KP_6	$02
-.define CTL_WORD1_KP_7	$01
+.define CTL_WORD1_KP_0	$0080
+.define CTL_WORD1_KP_1	$0040
+.define CTL_WORD1_KP_2	$0020
+.define CTL_WORD1_KP_3	$0010
+.define CTL_WORD1_KP_4	$0008
+.define CTL_WORD1_KP_5	$0004
+.define CTL_WORD1_KP_6	$0002
+.define CTL_WORD1_KP_7	$0001
 .define CTL_WORD1_KP_8	$8000
 .define CTL_WORD1_KP_9	$4000
 .define CTL_WORD1_KP_STAR	$2000

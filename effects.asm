@@ -6,6 +6,45 @@
 .bank 0
 .section "Effects" FREE
 
+
+effect_mosaic_pulse:
+	pha
+	phx
+	phy
+	php
+
+	A8
+	XY8
+
+	; ramp up
+	lda #07
+@lp1:
+	wai
+	sta MOSAIC
+	clc
+	adc #$20
+	bcc @lp1
+
+	; ramp down
+	lda #$e7
+@lp2:
+	wai
+	sta MOSAIC
+	sec
+	sbc #$20
+	bit #$f0
+	bne @lp2
+
+	stz MOSAIC
+
+	plp
+	ply
+	plx
+	pla
+
+	rts
+
+
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	; Performa fade-in using INIDISP bits 3-0 (master brightness)
 	;
@@ -27,7 +66,7 @@ effect_fadein:
 
 	; Increment brightness every 4 frames
 	lda framecount
-	and #3 ; will be 0 every 4 cycles
+	and #1 ; will be 0 every 2 cycles
 	bne @loop
 
 	inx
@@ -66,7 +105,7 @@ effect_fadeout:
 
 	; Decrement brightness every 4 frames
 	lda framecount
-	and #3 ; will be 0 every 4 cycles
+	and #1 ; will be 0 every 2 cycles
 	bne @loop
 
 	dex

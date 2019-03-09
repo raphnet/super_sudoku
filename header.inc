@@ -2,9 +2,13 @@
 
 .MEMORYMAP                      ; Begin describing the system architecture.
   SLOTSIZE $8000                ; The slot is $8000 bytes in size. More details on slots later.
-  DEFAULTSLOT 0
-  SLOT 0 $8000                  ; Defines Slot 0's starting address.
+  DEFAULTSLOT 1
+  SLOT 0 $0100
+  SLOT 1 $8000                  ; Defines Slot 0's starting address.
 .ENDME          ; End MemoryMap definition
+
+.define RAM_SLOT	0
+.define CODE_SLOT	1
 
 .ROMBANKSIZE $8000              ; Every ROM bank is 32 KBytes in size
 .ROMBANKS 8                     ; 2 Mbits - Tell WLA we want to use 8 ROM Banks
@@ -12,7 +16,7 @@
 .SNESHEADER
   ID "SNES"                     ; 1-4 letter string, just leave it as "SNES"
   
-  NAME "32Bit gamepad test   "  ; Program Title - can't be over 21 bytes,
+  NAME "Super Sudoku 2019    "  ; Program Title - can't be over 21 bytes,
   ;    "123456789012345678901"  ; use spaces for unused bytes of the name.
 
   SLOWROM
