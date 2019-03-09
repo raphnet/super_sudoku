@@ -7,8 +7,8 @@
 
 .define GRID_PITCH	16	; not used. Shifts hardcoded in cursor_gridToScreen
 ; Offset for position displaying the cursor centered on 0,0
-.define CURSOR_ORIGIN_X	40
-.define CURSOR_ORIGIN_Y	39
+.define CURSOR_ORIGIN_X	16
+.define CURSOR_ORIGIN_Y	47
 .define GRID_WIDTH	9
 
 .define CTL_ID_STANDARD		0
@@ -247,8 +247,11 @@ Start:
 	lda #(3<<4) ; Priority 3
 	sta oam_table1+3
 
+	lda #$54
+	sta oam_table2
 
 	;;; Enable backgrounds and sprites
+	A8
 	lda #$17            ; Enable OBJS+BG1+2
 	sta TM
 

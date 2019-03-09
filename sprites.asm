@@ -18,8 +18,27 @@ oam_table2: dsb $20
 
 
 sprites_init:
-	Memset oam_table1 0 _sizeof_oam_table1
-	Memset oam_table2 0 _sizeof_oam_table2
+	pha
+	php
+
+	Memset oam_table1 $f0 _sizeof_oam_table1
+	Memset oam_table2 $55 _sizeof_oam_table2
+
+	bra @done
+
+	A8
+	lda #0
+@lp:
+	jsr sprite_sync
+	inc A
+	cmp #128
+	bne @lp
+
+
+@done:
+	plp
+	pla
+
 	rts
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -34,6 +53,8 @@ sprite_sync:
 	phy
 	php
 
+	XY16
+
 	; Accept 16-bit A or 8-bit A
 	A16
 	and #$ff
@@ -43,8 +64,8 @@ sprite_sync:
 	asl
 
 	; Set the destination OAM address
-	sta OAMADDL
 
+	sta OAMADDL
 	tay
 
 	A8
@@ -57,7 +78,21 @@ sprite_sync:
 	lda oam_table1+3, y
 	sta OAMDATA
 
+
 	; TODO : Set the 9th X bit
+	A16
+	lda #$1F0
+	sta OAMADDL
+
+	A8
+	ldy #0
+@lp:
+	lda oam_table2, y
+	sta OAMDATA
+	iny
+	cpy #32
+	bne @lp
+@ex:
 
 	plp
 	ply
@@ -82,6 +117,8 @@ sprite_move:
 	phy
 	php
 
+	A16
+
 	; Multiply A by 4 to get table address
 	asl
 	asl
@@ -98,6 +135,8 @@ sprite_move:
 	sta (tmpspriteptr)
 	tya
 	sta (tmpspriteptr+1)
+
+
 
 	plp
 	ply
@@ -140,6 +179,7 @@ sprite_setCharacter:
 	ora oam_table1+3, Y
 	sta oam_table1+3, Y
 
+	
 	plp
 	ply
 	plx

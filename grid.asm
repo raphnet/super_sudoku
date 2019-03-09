@@ -36,8 +36,8 @@
 .define ADDED_DIGIT_PAL	($20 | ($5<<2))
 
 .define GRID_BGMAP_PITCH	32
-.define GRID_UPPER_LEFT_Y	7
-.define GRID_UPPER_LEFT_X	6
+.define GRID_UPPER_LEFT_Y	8
+.define GRID_UPPER_LEFT_X	3
 .define GRID_ZERO_CHAR		$30	; Which tile is 0
 
 .define GRID_BG_VRAM_ADDRESS	$3000
