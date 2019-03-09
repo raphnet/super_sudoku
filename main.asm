@@ -68,7 +68,7 @@ VBlank:
 	A8
 	XY8
 
-		; Animate scrolling background
+	; Animate scrolling background
 	lda bg2_count
 	ina
 	sta bg2_count
@@ -83,25 +83,29 @@ VBlank:
 	sta BG2VOFS
 @nomove:
 
+	; Update the global frame counter
 	A16
 	inc framecount
 
-
+	; Synchronize sprite 0 in case it moved
 	lda #0
 	jsr sprite_sync
 
+	; Redraw the sudoku grid contents if it changed
 	A8
 	lda grid_changed
 	beq @noredrawgrid
 	jsr grid_syncToScreen
-
 @noredrawgrid:
 	stz grid_changed
 
-	jsr doCursorMovement
-	jsr doCursorMovement
+	; Process effects
+	jsr effects_dovblank
 
-	; Read controller status
+
+	; Final housekeeping not touching the PPU
+	jsr doCursorMovement
+	jsr doCursorMovement
 	jsr readGamepads
 
 	plp
@@ -222,6 +226,8 @@ Start:
 
 	stz CGADSUB
 
+	;;; Effect engine
+	jsr effects_init
 
 	;;; Sprites
 

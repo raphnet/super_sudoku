@@ -153,6 +153,20 @@ ClearVRAM_next\@:
 .endm
 
 
+.macro pusha
+	pha
+	phx
+	phy
+	php
+.endm
+
+.macro popa
+	plp
+	ply
+	plx
+	pla
+.endm
+
 ; Synatx DrawStringPtr address X Y
 .macro DrawStringPtr
 	pha

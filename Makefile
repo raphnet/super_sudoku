@@ -30,6 +30,9 @@ run: $(ROMFILE)
 puzzles.o: puzzles.asm puzzles/simple.bin puzzles/easy.bin puzzles/intermediate.bin puzzles/expert.bin
 	$(WLA65816) -o $@ $<
 
+grid.o: grid.asm neighbors.asm
+	$(WLA65816) -o $@ $<
+
 main.cgr: tilemaps/main.png
 	$(PNG2SNES) $< --output=main --bitplanes=4 --tilesize 8 --binary
 
