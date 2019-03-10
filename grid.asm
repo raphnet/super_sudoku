@@ -15,7 +15,8 @@
 	gridarg_x: dw
 	gridarg_y: dw
 
-	end: db
+	grid_vram_ptr: dw
+	gridsync_row_count: dw
 .ends
 
 .16BIT
@@ -44,146 +45,59 @@
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
-	; Let 16-bit X equal the address for the row specified in A
+	; Update the screen (VRAM) according to griddata
 	;
-_grid_getTileRow:
-	pha
-	php
-
-	A8
-
-	sta WRMPYA ; First parameter for multiplication (Y coordinate)
-	lda #(GRID_BGMAP_PITCH*2).B ; pitch
-	sta WRMPYB ; Second parameter for multiplication
-
-	; wait 8 cycles for result
-	nop
-	nop
-	nop
-	nop
+	; Input: griddata
+	;
+	; Uses: grid_vram_ptr, gridsync_row_count
+	;
+grid_syncToScreen:
+	pushall
 
 	A16
+	XY16
 
-	lda RDMPYL ; read result
-
-	; Add the offset
+	lda #0
 	clc
 	adc #GRID_UPPER_LEFT_Y * GRID_BGMAP_PITCH
 	adc #GRID_UPPER_LEFT_X ; Advance to X
 	adc #GRID_BG_VRAM_ADDRESS
 
-	; Move result to X
-	tax
+	sta grid_vram_ptr
 
-	plp
-	pla
-	rts
+	; Counter for rows
+	ldy #9
+	sty gridsync_row_count
 
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	;
-	; Place one row of 9 number on the screen
-	;
-	; 8-Bit A : Row number (Y coordinate)
-	; 16-Bit Y : Offset into griddata to start copying from
-	;
-_grid_putRow:
-	pha
-	phy
-	phx
-	php
+	ldy #0 ; Index in griddata
 
-	A16
-	pha
-	; Compute griddata + Y, store it in tmpw1
-	tya
-	clc
-	adc #griddata
-	sta tmpw1
-	pla
+	; Set VRAM pointer to upper/left cell
+	lda grid_vram_ptr
+	sta VMADDL
+	bra @first_row	; Skip the increment
 
-	; Get the screen address for the first cell in this row
-	;lda #0.B	; Row 0
-	jsr _grid_getTileRow	; X now equals the screen destination
-	stx VMADDL
-
-	; Draw one row form griddata to the screen
-	ldy #0.W
 @row_loop:
-	lda (tmpw1)			; Get the current value
-	sta VMDATAL
-
-	; Advance source
-	inc tmpw1
-	inc tmpw1
-
-	lda #0
-	sta VMDATAL
-
-	; Advance screen destination
+	lda grid_vram_ptr	; fetch previous row value
+	clc
+	adc #64
+	sta grid_vram_ptr	; remember new start cell
+	sta VMADDL			; Set vram destination
+@first_row:
+	; Prepare counter for 9 cells
+	ldx #9
+@col_loop:
+	lda griddata, Y
+	iny			; Next cell in griddata
 	iny
-	cpy #9.W
+	sta VMDATAL	; Value
+	stz VMDATAL ; Skip grid
+	dex
+	bne @col_loop
+
+	dec gridsync_row_count
 	bne @row_loop
 
-	plp
-	plx
-	ply
-	pla
-
-	rts
-
-
-grid_syncToScreen:
-	pha
-	phx
-	phy
-	php
-
-;	ForceVBLANK
-
-	XY16
-	A8
-
-	; A: Row number (Y)
-	; Y: Offset for source grid data
-	; X: Loop counter
-	ldx #9.W
-	lda #$00.B
-	ldy #0.W
-@nextrow:
-	jsr _grid_putRow
-
-	ina	; Next row
-
-
-	iny ; Y += 9
-	iny
-	iny
-	iny
-	iny
-	iny
-	iny
-	iny
-	iny
-	iny
-	iny
-	iny
-	iny
-	iny
-	iny
-	iny
-	iny
-	iny
-
-	dex
-	bne @nextrow
-
-;	EndVBLANK
-
-	plp
-	ply
-	plx
-	pla
-
+	popall
 	rts
 
 
@@ -458,20 +372,44 @@ grid_insertValueAt:
 	rts
 
 
+grid_init_blank:
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Init the grid data to all empty cells.
+	;
+	pushall
+
+	Memset griddata 0 _sizeof_griddata
+
+	popall
+	rts
+
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
 	; Init the grid data array by copying what is passed in X. Also
 	; sync the on-screen grid.
 	;
-	; 16-Bit X: Puzzle ID
+	;  A: Puzzle ID
 	;
-grid_init:
-	pha
-	phx
-	phy
-	php
+grid_init_puzzle:
+	pushall
 
+	A16
+	and #$ff
+
+	; Puzzles are padded to 128 bytes in ROM
+
+	; Multiply by 128
+	asl
+	asl
+	asl
+	asl
+	asl
+	asl
+	asl ; * 128
+
+	tax ; Keep this as index
 
 	A8
 
@@ -497,10 +435,7 @@ grid_init:
 @done:
 	jsr grid_syncToScreen
 
-	plp
-	ply
-	plx
-	pla
+	popall
 
 	rts
 
