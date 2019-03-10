@@ -151,7 +151,9 @@ ClearVRAM_next\@:
 .macro XY16
 	rep #$10 ; Set the X and Y registers to 16-bit
 .endm
-
+.macro AXY16
+	rep #$30 ; Set A, X and Y to 16-bit
+.endm
 
 .macro pushall
 	pha
@@ -236,11 +238,11 @@ skip\@:
 	ldx #\3.W ; count
 	lda #\2 ; value
 	ldy #0.W ; offset
-MemsetLoop\@:
+_MemsetLoop\@\!:
 	sta \1, y ; Address + Y
 	iny
 	dex
-	bne MemsetLoop\@
+	bne _MemsetLoop\@\!
 
 	plp
 	ply
