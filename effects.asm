@@ -63,7 +63,7 @@ effect_mosaic_pulse:
 	stz effects_state
 	stz effects_tmp
 
-	lda #1
+	lda #4
 	sta effects_mosaic_bgmask
 
 	popall

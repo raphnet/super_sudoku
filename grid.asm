@@ -37,7 +37,7 @@
 .define ADDED_DIGIT_PAL	($20 | ($5<<2))
 
 .define GRID_BGMAP_PITCH	32
-.define GRID_UPPER_LEFT_Y	8
+.define GRID_UPPER_LEFT_Y	6
 .define GRID_UPPER_LEFT_X	3
 .define GRID_ZERO_CHAR		$30	; Which tile is 0
 
@@ -387,38 +387,19 @@ grid_init_blank:
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
-	; Init the grid data array by copying what is passed in X. Also
-	; sync the on-screen grid.
-	;
-	;  A: Puzzle ID
+	; Init the grid data array by copying from puzzle_buffer
 	;
 grid_init_puzzle:
 	pushall
 
-	A16
-	and #$ff
-
-	; Puzzles are padded to 128 bytes in ROM
-
-	; Multiply by 128
-	asl
-	asl
-	asl
-	asl
-	asl
-	asl
-	asl ; * 128
-
-	tax ; Keep this as index
-
+	XY16
 	A8
 
-	ldy #0.W
+	ldy #0
+	ldx #0
 
 @next_byte:
-	.24BIT
-	lda puzzles_easy, X	; Read puzzle byte
-	.16BIT
+	lda puzzle_buffer, X	; Read puzzle byte
 	sta griddata, Y
 	iny
 

@@ -61,11 +61,11 @@ sprite_sync:
 
 	; Multiply A by 4 to get table address
 	asl
+	sta OAMADDL
 	asl
 
 	; Set the destination OAM address
 
-	sta OAMADDL
 	tay
 
 	A8

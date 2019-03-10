@@ -1,6 +1,6 @@
 #!/bin/bash
 
-N_PUZZLES=10
+N_PUZZLES=100
 
 function generatePuzzles
 {

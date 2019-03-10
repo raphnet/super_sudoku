@@ -9,6 +9,7 @@
 	; The current screen position of the cursor sprite
 	cursor_x: dw
 	cursor_y: dw
+
 	; The destination position of the cursor sprite
 	cursor_dst_x: dw
 	cursor_dst_y: dw
@@ -50,27 +51,11 @@ cursor_dovblank:
 
 	A16
 
-	lda cursor_x
-	cmp cursor_dst_x
-	beq @x_done
-	bcc @x_less
-	dec cursor_x
-	bra @x_done
-@x_less:
-	inc cursor_x
-	bra @x_done
-@x_done:
+	jsr _upd_cursor_y
+	jsr _upd_cursor_y
+	jsr _upd_cursor_x
+	jsr _upd_cursor_x
 
-	lda cursor_y
-	cmp cursor_dst_y
-	beq @y_done
-	bcc @y_less
-	dec cursor_y
-	bra @y_done
-@y_less:
-	inc cursor_y
-	bra @y_done
-@y_done:
 
 	; Now update the sprite table
 	A8
@@ -86,6 +71,34 @@ cursor_dovblank:
 	plx
 	pla
 
+	rts
+
+	;;
+_upd_cursor_x:
+	lda cursor_x
+	cmp cursor_dst_x
+	beq @done
+	bcc @less
+	dec cursor_x
+	bra @done
+@less:
+	inc cursor_x
+	bra @done
+@done:
+	rts
+
+	;;
+_upd_cursor_y:
+	lda cursor_y
+	cmp cursor_dst_y
+	beq @done
+	bcc @less
+	dec cursor_y
+	bra @done
+@less:
+	inc cursor_y
+	bra @done
+@done:
 	rts
 
 

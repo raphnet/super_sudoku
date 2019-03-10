@@ -5,12 +5,32 @@
 .include "zeropage.inc"
 .include "gamepads.inc"
 .include "text.inc"
+.include "cursor.inc"
 
-.define GRID_PITCH	16	; not used. Shifts hardcoded in cursor_gridToScreen
 ; Offset for position displaying the cursor centered on 0,0
-.define CURSOR_ORIGIN_X	16
-.define CURSOR_ORIGIN_Y	47
-.define GRID_WIDTH	9
+.define GRID_CURSOR_ORIGIN_X	16
+.define GRID_CURSOR_ORIGIN_Y	31
+
+.define PRESS_B_TEXT_X	8
+.define PRESS_B_TEXT_Y	20
+.define PRESS_B_BOX_X	1
+.define PRESS_B_BOX_Y	18
+.define PRESS_B_BOX_W	30
+.define PRESS_B_BOX_H	5
+
+; First menu (load or empty)
+.define MENU1_CURSOR_ORG_X	40
+.define MENU1_CURSOR_ORG_Y	152
+.define MENU1_BOX_X	3
+.define MENU1_BOX_Y 16
+.define MENU1_BOX_W 26
+.define MENU1_BOX_H 10
+
+; Second menu (optional) (select difficulty)
+.define MENU2_CURSOR_ORG_X	40
+.define MENU2_CURSOR_ORG_Y  136
+.define MENU2_TEXT_FIRST_LINE_Y	18
+.define MENU2_TEXT_X 8
 
 .16BIT
 
@@ -18,19 +38,6 @@
 var_test1: db
 bg2_off: db
 bg2_count: db
-
-mosaic_size: db
-
-; The current screen position of the cursor sprite
-cursor_x: dw
-cursor_y: dw
-; The destination position of the cursor sprite
-cursor_dst_x: dw
-cursor_dst_y: dw
-; The coordinates of the cursor over the grid (converted
-; to screen coordinates by cursor_gridToScreen)
-cursor_grid_x: dw
-cursor_grid_y: dw
 
 grid_changed: db ; When non-zero, causes grid_syncToScreen to be called at vblank
 
@@ -93,6 +100,9 @@ VBlank:
 	; Synchronize sprite 0 in case it moved
 	lda #0
 	jsr sprite_sync
+	lda #1
+	jsr sprite_sync
+
 
 	; Redraw the sudoku grid contents if it changed
 	A8
@@ -107,8 +117,8 @@ VBlank:
 
 
 	; Final housekeeping not touching the PPU
-	jsr doCursorMovement
-	jsr doCursorMovement
+	jsr cursor_dovblank
+
 	jsr readGamepads
 
 	plp
@@ -116,58 +126,6 @@ VBlank:
 	plx
 	pla
 	rti
-
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	; Animate cursor movement to cursor_dst_x,y
-	;
-	; Called from VBLANK
-	;
-	; 
-	;
-doCursorMovement:
-	pha
-	phx
-	phy
-	php
-
-	A16
-
-	lda cursor_x
-	cmp cursor_dst_x
-	beq @x_done
-	bcc @x_less
-	dec cursor_x
-	bra @x_done
-@x_less:
-	inc cursor_x
-	bra @x_done
-@x_done:
-
-	lda cursor_y
-	cmp cursor_dst_y
-	beq @y_done
-	bcc @y_less
-	dec cursor_y
-	bra @y_done
-@y_less:
-	inc cursor_y
-	bra @y_done
-@y_done:
-
-	; Now update the sprite table
-	A8
-	lda cursor_x
-	sta oam_table1
-	lda cursor_y
-	sta oam_table1+1
-
-
-	plp
-	ply
-	plx
-	pla
-
-	rts
 
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -245,10 +203,10 @@ Start:
 	sta OBSEL
 
 	; Try to configure sprite 0 (0 * 4)
-	ldx #0000
-	stx OAMADDL
-
-	; Write record
+;	ldx #0000
+;	stx OAMADDL
+ 
+	; Write record for grid cursor
 	lda #32	; X
 	sta oam_table1+0
 	lda #64 ; Y
@@ -257,6 +215,17 @@ Start:
 	sta oam_table1+2
 	lda #(3<<4) ; Priority 3
 	sta oam_table1+3
+
+	; Write record for menu cursor
+	lda #32	; X
+	sta oam_table1+4
+	lda #64 ; Y
+	sta oam_table1+5
+	lda #04 ; Starting tile id
+	sta oam_table1+6
+	lda #(3<<4) ; Priority 3
+	sta oam_table1+7
+
 
 	lda #$54
 	sta oam_table2
@@ -267,15 +236,8 @@ Start:
 	sta TM
 
 
-	A16
-	; Cursor start in uppper-left corner of grid
-	stz cursor_grid_x
-	stz cursor_grid_y
-	jsr cursor_gridToScreen
-	lda cursor_dst_x
-	sta cursor_x
-	lda cursor_dst_y
-	sta cursor_y
+	;;; Cursor helper
+	jsr cursor_init
 
 	A8
 	XY8
@@ -305,18 +267,29 @@ title_screen:
 	A16
 	XY16
 
-	ldx #0
-	ldy #0
+	jsr drawPressB
+	bra fadein_titleScreen
+
+title_screen_from_step1:
+	jsr drawPressB
+	bra titlescreen_loop
+
+
+drawPressB:
+	pushall
+
+	wai
+	text_drawBox PRESS_B_BOX_X PRESS_B_BOX_Y PRESS_B_BOX_W PRESS_B_BOX_H
+	ldx #PRESS_B_TEXT_X
+	ldy #PRESS_B_TEXT_Y
 	jsr text_gotoxy
-
-	lda #'H'
-	jsr text_putchar
-
-	ldx #5
-	ldy #20
-	jsr text_gotoxy
-
 	text_drawString "PRESS B TO START"
+
+	popall
+
+	rts
+
+fadein_titleScreen:
 
 	; Disable forced blanking (clear bit 7)
 	; Start with master brightness at 0 (black)
@@ -327,6 +300,8 @@ title_screen:
 	; Perform fadein
 	jsr effect_fadein
 
+
+titlescreen_loop:
 
 	; Now stay here until B is pressed. This first button press
 	; is used to choose which controller port will be used from there.
@@ -364,9 +339,142 @@ title_screen:
 	; From this point on, functions must be called indirectly.
 	jsr clearEvents
 
-@title_step2:
 
-	; TODO : Menu
+	;; Step 2 of title. Select level
+	;
+	; Select mode:
+	;
+	; - Empty grid
+	; - Simple puzzle
+	; - Easy puzzle
+	; - Intermediate puzzle
+	; - Expert puzzle
+	;
+;	A16
+;	XY16
+
+;	lda #3
+;	sta text_box_x
+;	lda #16
+;	sta text_box_y
+;	lda #26
+;	sta text_box_w
+;	lda #9
+;	sta text_box_h
+
+	; Remove 'PRESS B TO START' box
+	wai
+	text_clearBox PRESS_B_BOX_X PRESS_B_BOX_Y PRESS_B_BOX_W PRESS_B_BOX_H
+
+back_to_step2:
+	wai
+	text_drawBox MENU1_BOX_X MENU1_BOX_Y MENU1_BOX_W MENU1_BOX_H
+	wai
+	text_drawStringXY "SELECT MODE:" 4 17
+	text_drawStringXY "BUILT-IN PUZZLE" 8 20
+	text_drawStringXY "EMPTY GRID" 8 22
+
+	jsr clearEvents
+
+	; Setup the cursor for the menu
+	cursor_setGridSize 1 2 ; W H
+	cursor_setScreenOrigin MENU1_CURSOR_ORG_X MENU1_CURSOR_ORG_Y
+	cursor_jumpToGridXY 0 0
+	cursor_setStartingTileID 4
+
+
+
+@title_step2_loop:
+	wai
+
+	ldx #0 ; First word only
+	jsr getEvents ; returns 16 bits
+
+	bit #CTL_WORD0_A
+	bne @back_to_step1
+	bit #CTL_WORD0_B
+	bne @choice_made
+
+	jsr cursor_move_by_gamepad
+
+	jsr clearEvents
+
+	bra @title_step2_loop
+
+@back_to_step1:
+	wai
+	text_clearBox MENU1_BOX_X MENU1_BOX_Y MENU1_BOX_W MENU1_BOX_H
+	wai
+	jmp title_screen_from_step1
+
+@choice_made:
+	; Start with an empty puzzle
+	jsr puzzles_loadEmpty
+
+	; If cursor Y is 0, go on with difficulty selection.
+	lda cursor_grid_y
+	beq select_level_Step
+
+	; Otherwise, just start. An empty puzzle is ready.
+	jmp start_with_blank_grid
+
+select_level_Step:
+	A16
+
+	; Overwrite previous menu text, and grow by one line
+	text_drawBox MENU1_BOX_X MENU1_BOX_Y MENU1_BOX_W MENU1_BOX_H+1
+
+	text_drawStringXY "SIMPLE PUZZLE"		MENU2_TEXT_X 	MENU2_TEXT_FIRST_LINE_Y
+	text_drawStringXY "EASY PUZZLE" 		MENU2_TEXT_X 	MENU2_TEXT_FIRST_LINE_Y+2
+	text_drawStringXY "INTERMEDIATE PUZZLE" MENU2_TEXT_X 	MENU2_TEXT_FIRST_LINE_Y+4
+	text_drawStringXY "EXPERT PUZZLE"		MENU2_TEXT_X 	MENU2_TEXT_FIRST_LINE_Y+6
+
+	cursor_setGridSize 1 4 ; W H
+	cursor_setScreenOrigin MENU2_CURSOR_ORG_X MENU2_CURSOR_ORG_Y
+	cursor_jumpToGridXY 0 0
+
+	jsr clearEvents
+@title_step3_loop:
+	wai
+
+	ldx #0 ; First word only
+	jsr getEvents ; returns 16 bits
+
+	bit #CTL_WORD0_A
+	bne @back_to_step2
+	bit #CTL_WORD0_B
+	bne @choice_made
+
+	jsr cursor_move_by_gamepad
+
+	jsr clearEvents
+	bra @title_step3_loop
+
+@back_to_step2:
+	text_clearBox MENU1_BOX_X MENU1_BOX_Y MENU1_BOX_W MENU1_BOX_H+1
+	jmp back_to_step2
+
+
+@choice_made:
+	jsr clearEvents
+
+	A16
+
+	; Save puzzle ID
+	lda cursor_grid_y
+
+	; Prepare arguments for loading puzzle
+	sta puzzle_level	; Direct from menu index (0=simple,1=easy,2=intermediate,3=expert)
+
+	lda #0
+	sta puzzle_id
+
+	; Load the puzzle to puzzle_buffer
+	jsr puzzles_load
+
+	bra grid_screen
+
+start_with_blank_grid:
 
 grid_screen:
 	jsr effect_fadeout
@@ -376,8 +484,15 @@ grid_screen:
 	LoadVRAM GRIDBG BG1_TILE_MAP_OFFSET	32*32*2
 
 	XY16
-	ldx #0
-	jsr grid_init
+	A16
+
+	; This takes puzzles.asm:puzzle_buffer as a data source
+	jsr grid_init_puzzle
+
+	cursor_setGridSize 9 9
+	cursor_setScreenOrigin GRID_CURSOR_ORIGIN_X GRID_CURSOR_ORIGIN_Y
+	cursor_setStartingTileID 0
+	cursor_jumpToGridXY 0 0
 
 	; Disable forced blanking (clear bit 7)
 	; Start with master brightness at 0 (black)
@@ -388,6 +503,7 @@ grid_screen:
 	; Perform fadein
 	jsr effect_fadein
 
+	jsr clearEvents
 
 	;;;;;;; Grid loop
 @grid_loop:
@@ -396,39 +512,6 @@ grid_screen:
 	jsr processButtons
 
 	bra @grid_loop
-
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	;
-	; Based on the controller keys, perform cursor movement
-	;
-	; Input: cursor_grid_x/y
-	; Output cursor_dst_x
-	;
-cursor_gridToScreen:
-	pha
-	php
-
-	A16
-	lda cursor_grid_x
-	asl	; *2
-	asl ; *4
-	asl ; *8
-	asl ; *16
-	; if input was valid, carry will be clear.
-	adc #CURSOR_ORIGIN_X
-	sta cursor_dst_x
-
-	lda cursor_grid_y
-	asl	; *2
-	asl ; *4
-	asl ; *8
-	asl ; *16
-	adc #CURSOR_ORIGIN_Y
-	sta cursor_dst_y
-
-	plp
-	pla
-	rts
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
@@ -447,32 +530,8 @@ processButtons:
 	jsr getEvents ; returns 16 bits
 ;	lda gamepad1_pressed.W
 
+	jsr cursor_move_by_gamepad
 
-	; Check for left/right buttons
-	bit #CTL_WORD0_LEFT.W
-	bne @go_left
-	bit #CTL_WORD0_RIGHT.W
-	bne @go_right
-	bra @lr_done
-@go_right:
-	jsr cursor_moveRight
-	bra @lr_done
-@go_left:
-	jsr cursor_moveLeft
-@lr_done:
-
-	; Check for up/down buttons
-	bit #CTL_WORD0_UP.W
-	bne @go_up
-	bit #CTL_WORD0_DOWN.W
-	bne @go_down
-	bra @ud_done
-@go_up:
-	jsr cursor_moveUp
-	bra @ud_done
-@go_down:
-	jsr cursor_moveDown
-@ud_done:
 
 	; Check for B button
 	bit #CTL_WORD0_B.W
@@ -531,57 +590,11 @@ processButtons:
 	; Clear event bits
 	jsr clearEvents
 
-	; Update cursor destination on screen based on
-	; (new?) position on the grid
-	jsr cursor_gridToScreen
-
 	plp
 	ply
 	plx
 	pla
 
-	rts
-
-cursor_moveLeft:
-	pha
-	lda cursor_grid_x
-	beq @min_reached
-	dec A
-	sta cursor_grid_x
-@min_reached:
-	pla
-	rts
-
-cursor_moveRight:
-	pha
-	lda cursor_grid_x
-	cmp #GRID_WIDTH-1
-	beq @max_reached
-	inc A
-	sta cursor_grid_x
-@max_reached:
-	pla
-	rts
-
-cursor_moveUp:
-	pha
-	lda cursor_grid_y
-	beq @min_reached
-	dec A
-	sta cursor_grid_y
-@min_reached:
-	pla
-	rts
-
-cursor_moveDown:
-	pha
-	lda cursor_grid_y
-	cmp #GRID_WIDTH-1
-	beq @max_reached
-	inc A
-	sta cursor_grid_y
-@max_reached:
-	pla
 	rts
 
 
@@ -612,9 +625,9 @@ proposeHint:
 			sta gridarg_value
 			; Counter for valid digits
 			lda #0
-@next_digit:
 			stx gridarg_x
 			sty gridarg_y
+@next_digit:
 			jsr grid_isEmptyAt
 			bcs @occupied	; If occupied, noting to do here
 			jsr grid_canInsertValueAt ; sets carry when illegal
