@@ -6,3 +6,4 @@ grid.o
 sprites.o
 puzzles.o
 text.o
+cursor.o
