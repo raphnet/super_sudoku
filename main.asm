@@ -7,10 +7,12 @@
 .include "text.inc"
 .include "cursor.inc"
 
-; Offset for position displaying the cursor centered on 0,0
-.define GRID_CURSOR_ORIGIN_X	16
+; Offset for position displaying the cursor centered on 0,0 (over game grid)
+.define GRID_CURSOR_ORIGIN_X	8
 .define GRID_CURSOR_ORIGIN_Y	31
 
+.define PRESS_B_CURSOR_X	40
+.define PRESS_B_CURSOR_Y	152
 .define PRESS_B_TEXT_X	8
 .define PRESS_B_TEXT_Y	20
 .define PRESS_B_BOX_X	1
@@ -32,6 +34,37 @@
 .define MENU2_TEXT_FIRST_LINE_Y	18
 .define MENU2_TEXT_X 8
 
+.define BUTTON_VALIDATE	CTL_WORD0_B ; for making choices in menu
+.define BUTTON_BACK		CTL_WORD0_A ; for going back to previous menu step
+.define BUTTON_MENU		CTL_WORD0_X ; open menu (in game)
+.define BUTTON_HINT		CTL_WORD0_Y ; request hint (in game)
+.define BUTTON_DELETE	CTL_WORD0_A ; delete number (in game)
+
+; Third menu (level selection)
+.define MENU3_CURSOR_ORG_X	20
+.define MENU3_CURSOR_ORG_Y	24
+.define MENU3_BOX_X	2
+.define MENU3_BOX_Y 2
+.define MENU3_BOX_W 28
+.define MENU3_BOX_H 24
+.define MENU3_TEXT_X 5
+.define MENU3_TEXT_Y 4
+
+; In-game menu
+.define MENU4_BOX_X	4
+.define MENU4_BOX_Y 15
+.define MENU4_BOX_W 23
+.define MENU4_BOX_H 11
+.define MENU4_TEXT_X 8
+.define MENU4_TEXT_Y 17
+.define MENU4_CURSOR_ORG_X 40
+.define MENU4_CURSOR_ORG_Y 128
+; return values (stored in ingame_menu_result.W)
+.define INGAME_MENU_RES_NOP		0
+.define INGAME_MENU_RES_RESTART	1
+.define INGAME_MENU_RES_SOLVE	2
+.define INGAME_MENU_RES_TITLE	3
+
 .16BIT
 
 .RAMSECTION "main_variables" SLOT RAM_SLOT
@@ -47,8 +80,16 @@ tmp_hint_value: dw
 ; depending on which controller pad is used to press B at title.
 fn_getEvents: dw
 fn_clearEvents: dw
+; Copy of ctl_id_pX for active controller
+controller_id: db
 
+; keep a copy of the cursor position before showing the in-game menu
+cursor_pos_x_before_menu: dw
+cursor_pos_y_before_menu: dw
+
+ingame_menu_result: dw
 .ENDS
+
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
@@ -100,8 +141,7 @@ VBlank:
 	; Synchronize sprite 0 in case it moved
 	lda #0
 	jsr sprite_sync
-	lda #1
-	jsr sprite_sync
+
 
 
 	; Redraw the sudoku grid contents if it changed
@@ -137,7 +177,7 @@ Start:
 
 	A8
 
-	SetPalette PALETTE, 0, 22*9
+	SetPalette PALETTE, 0, _sizeof_PALETTE
 
 	SetPalette SPRITES_PALETTE, 128, 32	; 16 colors
 
@@ -205,7 +245,7 @@ Start:
 	; Try to configure sprite 0 (0 * 4)
 ;	ldx #0000
 ;	stx OAMADDL
- 
+
 	; Write record for grid cursor
 	lda #32	; X
 	sta oam_table1+0
@@ -216,25 +256,12 @@ Start:
 	lda #(3<<4) ; Priority 3
 	sta oam_table1+3
 
-	; Write record for menu cursor
-	lda #32	; X
-	sta oam_table1+4
-	lda #64 ; Y
-	sta oam_table1+5
-	lda #04 ; Starting tile id
-	sta oam_table1+6
-	lda #(3<<4) ; Priority 3
-	sta oam_table1+7
-
 
 	lda #$54
 	sta oam_table2
 
-	;;; Enable backgrounds and sprites
-	A8
-	lda #$17            ; Enable OBJS+BG1+2
-	sta TM
-
+	; write to TM register, enable OBJs, BG1-2-3
+	EnableLayers $17
 
 	;;; Cursor helper
 	jsr cursor_init
@@ -264,15 +291,17 @@ title_screen:
 	; BG3
 	Fill_VRAM BG3_TILE_MAP_OFFSET ((1<<BGMAPENT_PALSHIFT)|0|$0000) 	32*32
 
+	EnableLayers $17
+
 	A16
 	XY16
 
 	jsr drawPressB
-	bra fadein_titleScreen
+	jmp fadein_titleScreen
 
 title_screen_from_step1:
 	jsr drawPressB
-	bra titlescreen_loop
+	jmp titlescreen_loop
 
 
 drawPressB:
@@ -284,6 +313,14 @@ drawPressB:
 	ldy #PRESS_B_TEXT_Y
 	jsr text_gotoxy
 	text_drawString "PRESS B TO START"
+
+	; Cursor is static
+	cursor_setGridSize 1 1 ; W H
+	cursor_setScreenOrigin PRESS_B_CURSOR_X PRESS_B_CURSOR_Y
+	cursor_jumpToGridXY 0 0
+	cursor_setStartingTileID 4
+	cursor_setPitch 16 16
+
 
 	popall
 
@@ -324,43 +361,30 @@ titlescreen_loop:
 
 
 @p1:
-	lda #gamepads_p1_getEvents
+	lda #gamepads_p1_getEvents.W
 	sta fn_getEvents
-	lda #gamepads_p1_clearEvents
+	lda #gamepads_p1_clearEvents.W
 	sta fn_clearEvents
+	A8
+	lda ctl_id_p1
+	sta controller_id
 	bra @controller_select_done
 @p2:
-	lda #gamepads_p2_getEvents
+	lda #gamepads_p2_getEvents.W
 	sta fn_getEvents
-	lda #gamepads_p2_clearEvents
+	lda #gamepads_p2_clearEvents.W
 	sta fn_clearEvents
+	A8
+	lda ctl_id_p2
+	sta controller_id
 
 @controller_select_done:
+	A16
 	; From this point on, functions must be called indirectly.
 	jsr clearEvents
 
 
-	;; Step 2 of title. Select level
-	;
-	; Select mode:
-	;
-	; - Empty grid
-	; - Simple puzzle
-	; - Easy puzzle
-	; - Intermediate puzzle
-	; - Expert puzzle
-	;
-;	A16
-;	XY16
-
-;	lda #3
-;	sta text_box_x
-;	lda #16
-;	sta text_box_y
-;	lda #26
-;	sta text_box_w
-;	lda #9
-;	sta text_box_h
+	;; Step 2 of title. Select empty grid or built in puzzle
 
 	; Remove 'PRESS B TO START' box
 	wai
@@ -381,6 +405,7 @@ back_to_step2:
 	cursor_setScreenOrigin MENU1_CURSOR_ORG_X MENU1_CURSOR_ORG_Y
 	cursor_jumpToGridXY 0 0
 	cursor_setStartingTileID 4
+	cursor_setPitch 16 16
 
 
 
@@ -390,9 +415,9 @@ back_to_step2:
 	ldx #0 ; First word only
 	jsr getEvents ; returns 16 bits
 
-	bit #CTL_WORD0_A
+	bit #BUTTON_BACK
 	bne @back_to_step1
-	bit #CTL_WORD0_B
+	bit #BUTTON_VALIDATE
 	bne @choice_made
 
 	jsr cursor_move_by_gamepad
@@ -422,8 +447,9 @@ select_level_Step:
 	A16
 
 	; Overwrite previous menu text, and grow by one line
+	wai
 	text_drawBox MENU1_BOX_X MENU1_BOX_Y MENU1_BOX_W MENU1_BOX_H+1
-
+	wai
 	text_drawStringXY "SIMPLE PUZZLE"		MENU2_TEXT_X 	MENU2_TEXT_FIRST_LINE_Y
 	text_drawStringXY "EASY PUZZLE" 		MENU2_TEXT_X 	MENU2_TEXT_FIRST_LINE_Y+2
 	text_drawStringXY "INTERMEDIATE PUZZLE" MENU2_TEXT_X 	MENU2_TEXT_FIRST_LINE_Y+4
@@ -431,6 +457,7 @@ select_level_Step:
 
 	cursor_setGridSize 1 4 ; W H
 	cursor_setScreenOrigin MENU2_CURSOR_ORG_X MENU2_CURSOR_ORG_Y
+	cursor_setPitch 16 16
 	cursor_jumpToGridXY 0 0
 
 	jsr clearEvents
@@ -440,9 +467,9 @@ select_level_Step:
 	ldx #0 ; First word only
 	jsr getEvents ; returns 16 bits
 
-	bit #CTL_WORD0_A
+	bit #BUTTON_BACK
 	bne @back_to_step2
-	bit #CTL_WORD0_B
+	bit #BUTTON_VALIDATE
 	bne @choice_made
 
 	jsr cursor_move_by_gamepad
@@ -466,7 +493,91 @@ select_level_Step:
 	; Prepare arguments for loading puzzle
 	sta puzzle_level	; Direct from menu index (0=simple,1=easy,2=intermediate,3=expert)
 
+
+prepare_ask_puzzle_id:
+	wai
+	text_clearBox MENU1_BOX_X MENU1_BOX_Y MENU1_BOX_W MENU1_BOX_H+1
+	wai
+	text_drawBox MENU3_BOX_X MENU3_BOX_Y MENU3_BOX_W MENU3_BOX_H
+
+	wai
+	text_drawStringXY " 1    2    3    4    5"		MENU3_TEXT_X 	MENU3_TEXT_Y
+	text_drawStringXY " 6    7    8    9   10"		MENU3_TEXT_X 	MENU3_TEXT_Y+1
+	wai
+	text_drawStringXY "11   12   13   14   15"		MENU3_TEXT_X 	MENU3_TEXT_Y+2
+	text_drawStringXY "16   17   18   19   20"		MENU3_TEXT_X 	MENU3_TEXT_Y+3
+	wai
+	text_drawStringXY "21   22   23   24   25"		MENU3_TEXT_X 	MENU3_TEXT_Y+4
+	text_drawStringXY "26   27   28   29   30"		MENU3_TEXT_X 	MENU3_TEXT_Y+5
+	wai
+	text_drawStringXY "31   32   33   34   35"		MENU3_TEXT_X 	MENU3_TEXT_Y+6
+	text_drawStringXY "36   37   38   39   40"		MENU3_TEXT_X 	MENU3_TEXT_Y+7
+	wai
+	text_drawStringXY "41   42   43   44   45"		MENU3_TEXT_X 	MENU3_TEXT_Y+8
+	text_drawStringXY "46   47   48   49   50"		MENU3_TEXT_X 	MENU3_TEXT_Y+9
+	wai
+	text_drawStringXY "51   52   53   54   55"		MENU3_TEXT_X 	MENU3_TEXT_Y+10
+	text_drawStringXY "56   57   58   59   60"		MENU3_TEXT_X 	MENU3_TEXT_Y+11
+	wai
+	text_drawStringXY "61   62   63   64   65"		MENU3_TEXT_X 	MENU3_TEXT_Y+12
+	text_drawStringXY "66   67   68   69   70"		MENU3_TEXT_X 	MENU3_TEXT_Y+13
+	wai
+	text_drawStringXY "71   72   73   74   75"		MENU3_TEXT_X 	MENU3_TEXT_Y+14
+	text_drawStringXY "76   77   78   79   80"		MENU3_TEXT_X 	MENU3_TEXT_Y+15
+	wai
+	text_drawStringXY "81   82   83   84   85"		MENU3_TEXT_X 	MENU3_TEXT_Y+16
+	text_drawStringXY "86   87   88   89   90"		MENU3_TEXT_X 	MENU3_TEXT_Y+17
+	wai
+	text_drawStringXY "91   92   93   94   95"		MENU3_TEXT_X 	MENU3_TEXT_Y+18
+	text_drawStringXY "96   97   98   99  100"		MENU3_TEXT_X 	MENU3_TEXT_Y+19
+
+	cursor_setGridSize 5 20 ; W H
+	cursor_setScreenOrigin MENU3_CURSOR_ORG_X MENU3_CURSOR_ORG_Y
+	cursor_setPitch 40 8
+	cursor_jumpToGridXY 0 0
+
+@select_puzzle_id_lop:
+	wai
+
+	ldx #0 ; First word only
+	jsr getEvents ; returns 16 bits
+
+	bit #BUTTON_BACK
+	bne @back_to_level_select
+	bit #BUTTON_VALIDATE
+	bne @done_puzzle_id_select
+
+	jsr cursor_move_by_gamepad
+
+	jsr clearEvents
+	bra @select_puzzle_id_lop
+
+@back_to_level_select:
+
+	; The puzzle ID list window overwrites the title.
+	;
+	; This is a quick and dirty way to restore it..
+	wai
+	ForceVBLANK
+	LoadVRAM TITLEBG BG1_TILE_MAP_OFFSET	_sizeof_TITLEBG
+	EndVBLANK
+
+	jsr clearEvents
+	jmp select_level_Step
+
+@done_puzzle_id_select:
+
+	; ID = cursor_grid_y * 5 + cursor_grid_x
+	A16
 	lda #0
+	clc
+	adc cursor_grid_y
+	adc cursor_grid_y
+	adc cursor_grid_y
+	adc cursor_grid_y
+	adc cursor_grid_y
+	adc cursor_grid_x
+
 	sta puzzle_id
 
 	; Load the puzzle to puzzle_buffer
@@ -492,7 +603,8 @@ grid_screen:
 	cursor_setGridSize 9 9
 	cursor_setScreenOrigin GRID_CURSOR_ORIGIN_X GRID_CURSOR_ORIGIN_Y
 	cursor_setStartingTileID 0
-	cursor_jumpToGridXY 0 0
+	cursor_setPitch 16 16
+	cursor_jumpToGridXY 4 4 ; Center of the grid
 
 	; Disable forced blanking (clear bit 7)
 	; Start with master brightness at 0 (black)
@@ -511,7 +623,20 @@ grid_screen:
 
 	jsr processButtons
 
-	bra @grid_loop
+	jsr grid_checkIfSolved
+	bcc @grid_solved
+
+	wai
+	text_clearBox 22 1 8 2
+
+	jmp @grid_loop
+
+@grid_solved:
+	wai
+	text_drawStringXY "`abcdefg" 22 1
+	text_drawStringXY "pqrstuvw" 22 2
+;	text_drawStringXY $80,$81,$82,$83,$84,$85,$86,$87 22 2
+	jmp @grid_loop
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
@@ -528,22 +653,87 @@ processButtons:
 
 	ldx #0 ; First word only
 	jsr getEvents ; returns 16 bits
-;	lda gamepad1_pressed.W
 
 	jsr cursor_move_by_gamepad
 
+	bit #BUTTON_MENU.W
+	bne @menu_button_pressed
+	jmp @menu_not_pressed
 
-	; Check for B button
-	bit #CTL_WORD0_B.W
-	bne @b_pressed
-	bra @b_not_pressed
-@b_pressed:
-	ldx #7
-	jsr insertValueAtCursor
-@b_not_pressed:
 
-	; Check for A button (DELETE)
-	bit #CTL_WORD0_A.W
+@menu_button_pressed:
+
+	lda cursor_grid_x
+	sta cursor_pos_x_before_menu
+	lda cursor_grid_y
+	sta cursor_pos_y_before_menu
+
+	jsr ingame_menu
+
+	ldx ingame_menu_result
+
+	cpx #INGAME_MENU_RES_NOP
+	beq @menu_done
+	cpx #INGAME_MENU_RES_RESTART
+	beq @do_restart_puzzle
+	cpx #INGAME_MENU_RES_SOLVE
+	beq @do_solve_puzzle
+	cpx #INGAME_MENU_RES_TITLE
+	beq @do_return_title
+
+	jmp @menu_done
+
+@do_restart_puzzle:
+	; read from puzzle_buffer again
+	jsr grid_init_puzzle
+	bra @menu_done
+
+@do_solve_puzzle:
+	; todo
+	bra @menu_done
+
+@do_return_title:
+	jsr effect_fadeout
+	ForceVBLANK
+	jmp title_screen
+
+@menu_done:
+
+	wai
+	ForceVBLANK
+	EnableLayers $17 ; reenable puzzle numbers
+	; Reload the grid
+	LoadVRAM GRIDBG BG1_TILE_MAP_OFFSET	32*32*2
+;	EndVBLANK
+
+	A16
+
+	cursor_setGridSize 9 9
+	cursor_setScreenOrigin GRID_CURSOR_ORIGIN_X GRID_CURSOR_ORIGIN_Y
+	cursor_setStartingTileID 0
+	cursor_setPitch 16 16
+;	cursor_jumpToGridXY 4 4 ; Center of the grid
+	; Bring the cursor back to where it was before
+	lda cursor_pos_x_before_menu
+	sta cursor_grid_x
+	lda cursor_pos_y_before_menu
+	sta cursor_grid_y
+	jsr cursor_jump_to_destination
+
+	A8
+	stz INIDISP
+	; Perform fadein
+	jsr effect_fadein
+
+	; beware of macros which confuse the assembler regarding
+	; size of registers!
+	A16
+	XY8
+@menu_not_pressed:
+
+
+	; Check for delete button
+	bit #BUTTON_DELETE.W
 	bne @a_pressed
 	bra @a_not_pressed
 @a_pressed:
@@ -552,7 +742,7 @@ processButtons:
 @a_not_pressed:
 
 	; Check for X button (HINT)
-	bit #CTL_WORD0_X.W
+	bit #BUTTON_HINT.W
 	bne @x_pressed
 	bra @x_not_pressed
 @x_pressed:
@@ -561,15 +751,22 @@ processButtons:
 
 
 
-
-	; TODO : Only with NTT data keypad!
+	; Note: when a standard controller is connected,
+	; the driver zeros extra bits. No need to actually
+	; check if we have a NTT controller or not.
 
 	; Get the second word which contains numbers
 	ldx #2
 	jsr getEvents
-;	lda gamepad1_pressed+2
-	xba ; make the bits consecutive
 
+	bit #CTL_WORD1_KP_CLEAR
+	beq @clear_not_pressed
+@clear_pressed:
+	ldx #0
+	jsr insertValueAtCursor
+@clear_not_pressed:
+
+	xba ; make the bits consecutive
 	ldx #0
 	ldy #10
 @digit_loop:
@@ -587,6 +784,9 @@ processButtons:
 @no_digit:
 
 
+@standard_controller:
+
+
 	; Clear event bits
 	jsr clearEvents
 
@@ -597,6 +797,92 @@ processButtons:
 
 	rts
 
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; In-game menu accessed by pressing X
+	;
+ingame_menu:
+	pushall
+
+	jsr effect_fadeout
+	ForceVBLANK
+
+	A16
+	XY16
+
+	wai
+	LoadVRAM TITLEBG BG1_TILE_MAP_OFFSET	_sizeof_TITLEBG
+
+	wai
+	EnableLayers $13 ; disable puzzle numbers layer
+
+	wai
+	text_drawBox MENU4_BOX_X MENU4_BOX_Y MENU4_BOX_W MENU4_BOX_H
+	wai
+
+	text_drawStringXY "BACK TO PUZZLE"		MENU4_TEXT_X 	MENU4_TEXT_Y
+	text_drawStringXY "RESTART PUZZLE"		MENU4_TEXT_X 	MENU4_TEXT_Y+2
+	text_drawStringXY "SOLVE PUZZLE" 		MENU4_TEXT_X 	MENU4_TEXT_Y+4
+	text_drawStringXY "RETURN TO TITLE" 	MENU4_TEXT_X 	MENU4_TEXT_Y+6
+
+	cursor_setGridSize 1 4 ; W H
+	cursor_setScreenOrigin MENU4_CURSOR_ORG_X MENU4_CURSOR_ORG_Y
+	cursor_setPitch 16 16
+	cursor_setStartingTileID 4
+	cursor_jumpToGridXY 0 0
+
+	A8
+	stz INIDISP
+	; Perform fadein
+	jsr effect_fadein
+	A16
+
+@ingame_menu_loop:
+	wai
+
+	ldx #0 ; First word only
+	jsr getEvents ; returns 16 bits
+
+	bit #BUTTON_BACK
+	bne @back
+	bit #BUTTON_VALIDATE
+	bne @choice_made
+
+	jsr cursor_move_by_gamepad
+
+	jsr clearEvents
+	bra @ingame_menu_loop
+
+@choice_made:
+
+	;	return values are defined to match menu order
+	lda cursor_grid_y
+
+	; Not implemented yet, so refuse
+	cmp #INGAME_MENU_RES_SOLVE
+	beq @invalid_menu_choice
+
+	; otherwise, that's the return value
+	sta ingame_menu_result
+	bra @cleanup
+
+@invalid_menu_choice:
+	jsr effect_mosaic_pulse
+	jsr clearEvents
+	bra @ingame_menu_loop
+
+@back: ; go back to game
+	lda #INGAME_MENU_RES_NOP
+	sta ingame_menu_result
+	bra @cleanup
+
+@cleanup:
+	
+	jsr clearEvents
+
+	popall
+
+	rts
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;

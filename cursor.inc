@@ -50,3 +50,16 @@
 	pla
 .endm
 
+.macro cursor_setPitch
+	pha
+	php
+	A16
+	lda #\1
+	sta cursor_x_pitch
+	lda #\2
+	sta cursor_y_pitch
+	plp
+	pla
+.endm
+
+

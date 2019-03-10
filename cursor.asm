@@ -30,6 +30,12 @@
 	; Max grid values (computed from grid width automatically)
 	cursor_grid_max_x: dw
 	cursor_grid_max_y: dw
+
+	cursor_x_pitch: dw
+	cursor_y_pitch: dw
+
+
+	cursor_pmult_tmp: dw
 .ends
 
 .16BIT
@@ -121,6 +127,10 @@ cursor_init:
 
 	stz cursor_org_x
 	stz cursor_org_y
+
+	lda #16
+	sta cursor_x_pitch
+	sta cursor_y_pitch
 
 	jsr cursor_jump_to_destination
 
@@ -214,7 +224,13 @@ cursor_moveRight:
 	beq @max_reached
 	inc A
 	sta cursor_grid_x
+	bra @done
+
 @max_reached:
+	;stz cursor_grid_x
+	;jsr cursor_jump_to_destination
+
+@done:
 
 	popall
 	rts
@@ -224,13 +240,30 @@ cursor_moveRight:
 	; Move the cursor up one grid position
 	;
 cursor_moveUp:
-	pha
+	pushall
+	AXY16
+
+	ldy cursor_grid_h
+	dey
+	sty cursor_grid_max_y
+
 	lda cursor_grid_y
 	beq @min_reached
 	dec A
 	sta cursor_grid_y
+	bra @done
+
 @min_reached:
-	pla
+	; wrap around
+	;lda cursor_grid_max_y
+	;sta cursor_grid_y
+
+	; we can't have the cursor move backward to the end! Jumping in this
+	; case feels more natural
+	;jsr cursor_jump_to_destination
+
+@done:
+	popall
 	rts
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -246,13 +279,18 @@ cursor_moveDown:
 	sty cursor_grid_max_y
 
 	lda cursor_grid_y
-;	cmp #GRID_WIDTH-1
+
 	cmp cursor_grid_max_y
 	beq @max_reached
 	inc A
 	sta cursor_grid_y
-@max_reached:
+	bra @done
 
+@max_reached:
+	;stz cursor_grid_y
+	;jsr cursor_jump_to_destination
+
+@done:
 	popall
 	rts
 
@@ -266,10 +304,10 @@ cursor_moveDown:
 	; Output cursor_dst_x/y
 	;
 cursor_gridToScreen:
-	pha
-	php
+	pushall
 
 	A16
+	XY8
 	lda cursor_grid_x
 	jsr _cursor_mult_A_by_X_pitch
 
@@ -283,17 +321,54 @@ cursor_gridToScreen:
 	adc cursor_org_y
 	sta cursor_dst_y
 
-	plp
-	pla
+	popall
 	rts
 
 
+	; pitches of 8 or 16 only
 _cursor_mult_A_by_Y_pitch:
-_cursor_mult_A_by_X_pitch:
+	ldx cursor_y_pitch
+	cpx #8
+	beq @p8
+
 	asl ; * 2
+@p8:
 	asl ; * 4
 	asl ; * 8
 	asl ; * 16
+	rts
+
+
+_cursor_mult_A_by_X_pitch:
+	stz cursor_pmult_tmp	; post multiply addition
+
+	ldx cursor_x_pitch
+	cpx #8
+	beq @p8
+	cpx #16
+	beq @p16
+	cpx #32
+	beq @p32
+
+	pha
+	asl
+	asl
+	asl
+	sta cursor_pmult_tmp
+	pla
+
+@p32:
+	asl ; * 2
+@p16:
+	asl ; * 4
+@p8:
+	asl ; * 8
+	asl ; * 16
+	asl ; * 32
+
+	clc
+	adc cursor_pmult_tmp
+
 	rts
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

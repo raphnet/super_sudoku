@@ -26,12 +26,12 @@ skip\@:
 	ldy #\3
 	jsr text_gotoxy
 
-	ldy #drawstring_strn\@
+	ldy #@drawstring_strn\@
 	jsr text_print
-	jmp skipn\@
-drawstring_strn\@:
+	jmp @skipn\@
+@drawstring_strn\@:
 	.db \1,0
-skipn\@:
+@skipn\@:
 	plp
 	plx
 	ply

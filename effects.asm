@@ -63,7 +63,7 @@ effect_mosaic_pulse:
 	stz effects_state
 	stz effects_tmp
 
-	lda #4
+	lda #5
 	sta effects_mosaic_bgmask
 
 	popall
@@ -190,7 +190,7 @@ effect_fadein:
 
 	; Increment brightness every 4 frames
 	lda framecount
-	and #1 ; will be 0 every 2 cycles
+	and #0 ; will be 0 every 2 cycles
 	bne @loop
 
 	inx
@@ -231,7 +231,7 @@ effect_fadeout:
 
 	; Decrement brightness every 4 frames
 	lda framecount
-	and #1 ; will be 0 every 2 cycles
+	and #0 ; will be 0 every 2 cycles
 	bne @loop
 
 	dex

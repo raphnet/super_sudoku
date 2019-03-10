@@ -18,15 +18,31 @@ oam_table2: dsb $20
 
 
 sprites_init:
-	pha
-	php
+	pushall
 
-	Memset oam_table1 $f0 _sizeof_oam_table1
+	A16
+
+	Memset oam_table1 $00 _sizeof_oam_table1
 	Memset oam_table2 $55 _sizeof_oam_table2
 
-	bra @done
-
+	XY16
 	A8
+
+	lda -64
+	ldy #0
+	ldx #64
+@lp_x:
+	sta oam_table1, Y 		; X
+	sta oam_table1 + 1, Y	; Y
+	iny
+	iny
+	iny
+	iny
+	dex
+	bne @lp_x
+
+	; sync all sprites : TODO : Use DMA
+
 	lda #0
 @lp:
 	jsr sprite_sync
@@ -36,8 +52,8 @@ sprites_init:
 
 
 @done:
-	plp
-	pla
+
+	popall
 
 	rts
 

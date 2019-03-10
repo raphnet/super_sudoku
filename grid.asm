@@ -38,7 +38,7 @@
 
 .define GRID_BGMAP_PITCH	32
 .define GRID_UPPER_LEFT_Y	6
-.define GRID_UPPER_LEFT_X	3
+.define GRID_UPPER_LEFT_X	2
 .define GRID_ZERO_CHAR		$30	; Which tile is 0
 
 .define GRID_BG_VRAM_ADDRESS	$3000
@@ -235,6 +235,42 @@ grid_isEmptyAt:
 
 	rts
 
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Check if the grid is solved.
+	;
+	; Solved = number in all cells. No checks for errors required since
+	; the game prevents invalid entries already.
+	;
+	; Input: griddata
+	; Output: Carry flag. (Set = not solved)
+	;
+grid_checkIfSolved:
+	pushall
+
+	A16
+	XY16
+	ldx #0
+@lp:
+	lda griddata, X
+	and #$ff		; keep only number (ignore attributes)
+	beq @ret_sec	; If zero, grid is not full and therefore not solved.
+	inx
+	inx
+	cpx #162
+	bne @lp
+
+	; No zeros found = grid full = solved!
+
+@ret_clc:
+	popall
+	clc
+	rts
+
+@ret_sec:
+	popall
+	sec
+	rts
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
@@ -414,7 +450,11 @@ grid_init_puzzle:
 
 
 @done:
-	jsr grid_syncToScreen
+;	jsr grid_syncToScreen
+	; Trigger a redraw
+	lda #1
+	sta grid_changed
+
 
 	popall
 

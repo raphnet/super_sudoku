@@ -274,3 +274,17 @@ _MemsetLoop\@\!:
 
 .endm
 
+; Syntax: EnableLayers mask (for TM/$212C)
+;
+.macro EnableLayers
+	pha
+	php
+
+	A8
+
+	lda #\1
+	sta TM
+
+	plp
+	pla
+.endm
