@@ -8,7 +8,7 @@ int main(int argc, char **argv)
 	const char *infilename, *outfilename;
 	int retval = -1, i;
 	char linebuf[100];
-	unsigned char puzzlebin[81];
+	unsigned char puzzlebin[128];
 	int line = 1;
 
 	if (argc < 3) {
@@ -30,6 +30,8 @@ int main(int argc, char **argv)
 		perror(outfilename);
 		goto error;
 	}
+
+	memset(puzzlebin, 0, sizeof(puzzlebin));
 
 	while (fgets(linebuf, sizeof(linebuf), in_fptr)) {
 		printf("Line: %s", linebuf);
