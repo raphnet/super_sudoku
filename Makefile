@@ -9,7 +9,7 @@ DEPS=snesregs.inc misc_macros.inc header.inc snes_init.asm text.inc gamepads.inc
 # note: New objects must also be added to linkfile.lnk
 OBJS=main.o effects.o gamepads.o grid.o puzzles.o sprites.o text.o cursor.o
 
-ROMFILE=sudoku2019.sfc
+ROMFILE=super_sudoku.sfc
 
 all: $(ROMFILE)
 

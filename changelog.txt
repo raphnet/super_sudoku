@@ -1,0 +1,9 @@
+
+2019-03-10: Version 0.1
+	Initial release:
+
+	- Total 400 built-in puzzles
+	- 4 levels (simple, easy, intermediate, expert)
+	- Basic hint function
+	- Only playable with the NTT Data Keypad
+
