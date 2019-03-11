@@ -60,23 +60,23 @@ numbers_green.cgr: tilemaps/numbers_green.png
 numbers.vra: tilemaps/numbers.png
 	$(PNG2SNES) --bitplanes 2 --tilesize 8 --binary $< --output numbers
 
-puzzles/%.bin: puzzles/%.txt csv2bin/puzzletxt2bin
-	csv2bin/puzzletxt2bin $< $@
+puzzles/%.bin: puzzles/%.txt utils/puzzletxt2bin
+	utils/puzzletxt2bin $< $@
 
 # Tiled .TMX -> .CSV
 %.csv: tilemaps/%.tmx
 	tiled $< --export-map $@
 
 # .CSV to Binary (16 bit per tile)
-%.map: %.csv csv2bin/csv2bin
-	csv2bin/csv2bin $< $@
+%.map: %.csv utils/csv2bin
+	utils/csv2bin $< $@
 
 # Target to compile the CSV to BIN tool
-csv2bin/csv2bin:
-	$(MAKE) -C csv2bin
+utils/csv2bin:
+	$(MAKE) -C utils
 
-csv2bin/puzzletxt2bin:
-	$(MAKE) -C csv2bin
+utils/puzzletxt2bin:
+	$(MAKE) -C utils
 
 clean:
 	rm -f -- *.vra *.cgr $(OBJS) $(ROMFILE) *.log *.sym *.map
