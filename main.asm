@@ -597,6 +597,14 @@ grid_screen:
 
 	; Load the grid
 	LoadVRAM GRIDBG BG1_TILE_MAP_OFFSET	32*32*2
+	; Overwrite the L/R icon for "keypad" when using a NTT Data Keypad
+	A8
+	lda controller_id
+	cmp #CTL_ID_NTT_KEYPAD
+	bne @not_ntt
+	text_drawStringXY "jk" 22 16	; tiles 104 105
+	text_drawStringXY "z{" 22 17	 ; tiles 124 124
+@not_ntt:
 
 	XY16
 	A16
@@ -760,6 +768,13 @@ processButtons:
 	EnableLayers $17 ; reenable puzzle numbers
 	; Reload the grid
 	LoadVRAM GRIDBG BG1_TILE_MAP_OFFSET	32*32*2
+
+	; Overwrite the L/R icon for "keypad" when using a NTT Data Keypad
+	text_drawStringXY "jk" 22 16	; tiles 104 105
+	text_drawStringXY "z{" 22 17	 ; tiles 124 124
+@not_ntt:
+
+
 ;	EndVBLANK
 
 	A16
@@ -943,7 +958,7 @@ ingame_menu:
 	bra @cleanup
 
 @cleanup:
-	
+
 	jsr clearEvents
 
 	popall
