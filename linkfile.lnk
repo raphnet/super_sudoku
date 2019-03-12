@@ -7,3 +7,4 @@ sprites.o
 puzzles.o
 text.o
 cursor.o
+solver.o

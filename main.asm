@@ -7,6 +7,15 @@
 .include "text.inc"
 .include "cursor.inc"
 
+; Button definitions
+.define BUTTON_VALIDATE	CTL_WORD0_B ; for making choices in menu
+.define BUTTON_BACK		CTL_WORD0_A ; for going back to previous menu step
+.define BUTTON_MENU		CTL_WORD0_X ; open menu (in game)
+.define BUTTON_HINT		CTL_WORD0_Y ; request hint (in game)
+.define BUTTON_DELETE	CTL_WORD0_A ; delete number (in game)
+.define BUTTON_PREV_VALUE	CTL_WORD0_L ; cycle to prev. valid value
+.define BUTTON_NEXT_VALUE	CTL_WORD0_R ; cycle to next valid value
+
 ; Offset for position displaying the cursor centered on 0,0 (over game grid)
 .define GRID_CURSOR_ORIGIN_X	8
 .define GRID_CURSOR_ORIGIN_Y	31
@@ -33,12 +42,6 @@
 .define MENU2_CURSOR_ORG_Y  136
 .define MENU2_TEXT_FIRST_LINE_Y	18
 .define MENU2_TEXT_X 8
-
-.define BUTTON_VALIDATE	CTL_WORD0_B ; for making choices in menu
-.define BUTTON_BACK		CTL_WORD0_A ; for going back to previous menu step
-.define BUTTON_MENU		CTL_WORD0_X ; open menu (in game)
-.define BUTTON_HINT		CTL_WORD0_Y ; request hint (in game)
-.define BUTTON_DELETE	CTL_WORD0_A ; delete number (in game)
 
 ; Third menu (level selection)
 .define MENU3_CURSOR_ORG_X	20
@@ -75,6 +78,7 @@ bg2_count: db
 grid_changed: db ; When non-zero, causes grid_syncToScreen to be called at vblank
 
 tmp_hint_value: dw
+cur_cycled_idx: dw
 
 ; Pointers to gamepads_pX_getEvents and gamepads_pX_clearEvents. Set
 ; depending on which controller pad is used to press B at title.
@@ -623,6 +627,8 @@ grid_screen:
 
 	jsr processButtons
 
+	jsr displayNumValidMovesInCell
+
 	jsr grid_checkIfSolved
 	bcc @grid_solved
 
@@ -637,6 +643,56 @@ grid_screen:
 	text_drawStringXY "pqrstuvw" 22 2
 ;	text_drawStringXY $80,$81,$82,$83,$84,$85,$86,$87 22 2
 	jmp @grid_loop
+
+
+
+	;;;;; quick debug function to test solver_countValidMoves
+displayNumValidMovesInCell:
+rts
+	pushall
+
+	A16
+	XY8
+
+	lda cursor_grid_x
+	sta gridarg_x
+	lda cursor_grid_y
+	sta gridarg_y
+	jsr solver_countValidMovesInCell
+
+	wai
+	text_clearBox 1 1 9 1
+
+	ldx #1
+	ldy #1
+	jsr text_gotoxy
+
+	lda slv_num_valid_moves
+	clc
+	adc #$30
+	jsr text_putchar
+
+
+/*
+	ldy slv_num_valid_moves
+	beq @no_moves
+
+	ldy #0
+
+@lp:
+	lda slv_valid_list, Y
+	and #$ff
+	clc
+	adc #$30
+	wai
+	jsr text_putchar
+	iny
+	cpy slv_num_valid_moves
+	bne @lp
+@no_moves:
+*/
+	popall
+	rts
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
@@ -734,8 +790,7 @@ processButtons:
 
 	; Check for delete button
 	bit #BUTTON_DELETE.W
-	bne @a_pressed
-	bra @a_not_pressed
+	beq @a_not_pressed
 @a_pressed:
 	ldx #0	; 0 means delete
 	jsr insertValueAtCursor
@@ -743,11 +798,22 @@ processButtons:
 
 	; Check for X button (HINT)
 	bit #BUTTON_HINT.W
-	bne @x_pressed
-	bra @x_not_pressed
+	beq @x_not_pressed
 @x_pressed:
 	jsr proposeHint
 @x_not_pressed:
+
+
+	; Check for the 'previous value' button
+	bit #BUTTON_PREV_VALUE
+	beq @l_not_pressed
+	jsr insertPrevValidValue
+@l_not_pressed:
+	; Check for the 'next value' button
+	bit #BUTTON_NEXT_VALUE
+	beq @r_not_pressed
+	jsr insertNextValidValue
+@r_not_pressed:
 
 
 
@@ -976,6 +1042,130 @@ proposeHint:
 
 	rts
 
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Insert the next possible valid value in the cell.
+	;
+	; Uses cur_cycled_idx to keep track of what value is being
+	; proposed. The list of value is setup by calling solver_countValidMovesInCell
+	;
+insertNextValidValue:
+	pushall
+
+	AXY16
+
+	; Prepare arguments and call function to count moves
+	lda cursor_grid_x
+	sta gridarg_x
+	lda cursor_grid_y
+	sta gridarg_y
+	jsr solver_countValidMovesInCell
+
+	; Check the result. If there are no valid moves we are done
+	lda slv_num_valid_moves
+	beq @no_moves
+
+	; Make sure our current move index is still valid
+	lda cur_cycled_idx
+	cmp slv_num_valid_moves
+	bcc @not_too_high	; cur_cycle_idx < slv_num_valid_moves
+	lda slv_num_valid_moves
+	sta cur_cycled_idx ; store now valid value
+@not_too_high:
+
+	inc A
+	cmp slv_num_valid_moves
+	bcc @ok	; <
+	beq @ok ; =
+	; >
+	lda #0
+@ok:
+	sta cur_cycled_idx ; store new value
+
+	; When the index is one past the end of the list, propose
+	; 0 (empty)
+	ldx #0
+	cmp slv_num_valid_moves
+	beq @doinsert
+
+	; Use index to fetch the valid digit from the array
+	tax
+	lda slv_valid_list, X
+	and #$ff	; drop extra bits
+
+	tax			; storein X for function arg
+@doinsert:
+	jsr insertValueAtCursor
+
+@no_moves:
+
+	popall
+	rts
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Insert the previous possible valid value in the cell.
+	;
+	; Uses cur_cycled_idx to keep track of what value is being
+	; proposed. The list of value is setup by calling solver_countValidMovesInCell
+	;
+
+insertPrevValidValue:
+	pushall
+
+	AXY16
+
+	; Prepare arguments and call function to count moves
+	lda cursor_grid_x
+	sta gridarg_x
+	lda cursor_grid_y
+	sta gridarg_y
+	jsr solver_countValidMovesInCell
+
+	; Check the result. If there are no valid moves we are done
+	lda slv_num_valid_moves
+	beq @no_moves
+
+	; Make sure our current move index is still valid
+	lda cur_cycled_idx
+	cmp slv_num_valid_moves
+	bcc @not_too_high	; cur_cycle_idx < slv_num_valid_moves
+	lda slv_num_valid_moves
+	sta cur_cycled_idx ; store now valid value
+@not_too_high:
+
+	; Check if we just decrement our index?
+	lda cur_cycled_idx
+	bne @nowrap	; < yes
+@wrap: 			; < No, it would fall below 0.
+	lda slv_num_valid_moves
+	bra @wd
+@nowrap:
+	dec A
+@wd:
+	sta cur_cycled_idx ; store now active value
+
+	; When the index is one past the end of the list, propose
+	; 0 (empty)
+	ldx #0
+	cmp slv_num_valid_moves
+	beq @doinsert
+
+
+	; Use index to fetch the valid digit from the array
+	tax
+	lda slv_valid_list, X
+	and #$ff	; drop extra bits
+
+	tax			; storein X for function arg
+@doinsert:
+	jsr insertValueAtCursor
+
+@no_moves:
+
+	popall
+	rts
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;

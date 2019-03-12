@@ -7,7 +7,7 @@ PNG2SNES=png2snes -q
 DEPS=snesregs.inc misc_macros.inc header.inc snes_init.asm text.inc gamepads.inc cursor.inc
 
 # note: New objects must also be added to linkfile.lnk
-OBJS=main.o effects.o gamepads.o grid.o puzzles.o sprites.o text.o cursor.o
+OBJS=main.o effects.o gamepads.o grid.o puzzles.o sprites.o text.o cursor.o solver.o
 
 ROMFILE=super_sudoku.sfc
 
