@@ -74,11 +74,18 @@ text_gotoxy:
 	popall
 	rts
 
+text_putbcd:
+	pushall
+
+
+	popall
+	rts
+
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
-	; Move the cursor to X,Y
+	; print a character
 	;
-	; X: X coordinate
+	; A: character
 	; Y: Y coordinate
 	;
 	; Warning: This access PPU registers directly. Use from vblank interrupt,
