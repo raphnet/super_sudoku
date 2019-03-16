@@ -181,6 +181,40 @@ grid_checkNeighborsForValue:
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
+	; Let X equal the griddata offset for coordinate
+	;
+	; Input: gridarg_x, gridarg_Y
+	; Output: X
+	;
+	; Note: Call with 16-Bit X!
+	;
+grid_getDataOffset:
+	pha
+
+	A16
+
+	; Multiply by 18 (grid pitch)
+	lda gridarg_y
+	asl ; x2
+	asl ; x4
+	asl ; x8
+	asl ; x16
+	adc gridarg_y ; 18x = 16x + x + x
+	adc gridarg_y
+
+	; Add X (2x)
+	adc gridarg_x
+	adc gridarg_x
+
+	; A now contains the offset into griddata. Move
+	; to Y to use as index
+	tax
+
+	pla
+	rts
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
 	; Check if a given grid cell is EMPTY
 	;
 	; Input: gridarg_value, gridarg_x, gridarg_Y

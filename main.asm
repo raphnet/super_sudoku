@@ -92,6 +92,8 @@ cursor_pos_x_before_menu: dw
 cursor_pos_y_before_menu: dw
 
 ingame_menu_result: dw
+
+run_solver: dw
 .ENDS
 
 
@@ -629,9 +631,15 @@ grid_screen:
 
 	jsr clearEvents
 
+	A16
+	stz run_solver
+	A8
 	;;;;;;; Grid loop
 @grid_loop:
 	wai
+
+	lda run_solver
+	bne @run_solver
 
 	jsr processButtons
 
@@ -644,6 +652,11 @@ grid_screen:
 	text_clearBox 22 1 8 2
 
 	jmp @grid_loop
+
+@run_solver:
+	jsr easySolver
+	stz run_solver
+	bra @grid_loop
 
 @grid_solved:
 	wai
@@ -753,7 +766,8 @@ processButtons:
 	bra @menu_done
 
 @do_solve_puzzle:
-	; todo
+	lda #1
+	sta run_solver
 	bra @menu_done
 
 @do_return_title:
@@ -940,8 +954,8 @@ ingame_menu:
 	lda cursor_grid_y
 
 	; Not implemented yet, so refuse
-	cmp #INGAME_MENU_RES_SOLVE
-	beq @invalid_menu_choice
+;	cmp #INGAME_MENU_RES_SOLVE
+;	beq @invalid_menu_choice
 
 	; otherwise, that's the return value
 	sta ingame_menu_result
@@ -967,69 +981,73 @@ ingame_menu:
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
+	; As long hints are found, insert them.
+	;
+	;
+easySolver:
+	pushall
+
+@next:
+	wai
+
+
+	jsr solver_findSoleCandidate
+	bcc @found
+	jsr solver_findUniqueRowCandidate
+	bcc @found
+	jsr solver_findUniqueColumnCandidate
+	bcc @found
+	bra @not_found
+
+@found:
+	; Get the coordinates
+	ldx slv_x
+	ldy slv_y
+
+	lda slv_digit
+	sta gridarg_value
+	stx gridarg_x
+	sty gridarg_y
+	jsr grid_insertValueAt
+
+	bra @next
+
+@not_found:
+
+	popall
+	rts
+
+
+bruteForceSolver:
+	rts
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
 	; Try to find a cell which can only accept a single digit
 	;
 	;
 proposeHint:
-	pha
-	phx
-	phy
-	php
+	pushall
 
 	A16
 	XY16
 
+	jsr solver_findSoleCandidate
+	bcc @found
+
+	jsr solver_findUniqueRowCandidate
+	bcc @found
+
+	jsr solver_findUniqueColumnCandidate
+	bcc @found
 
 
-	ldy #0
-@next_y:
-		ldx #0
-@next_x:
+	bra @not_found
 
-			; Try all digits, from 9 to 1, counting how many are valid
-			; moves in this cell
-			lda #9
-			sta gridarg_value
-			; Counter for valid digits
-			lda #0
-			stx gridarg_x
-			sty gridarg_y
-@next_digit:
-			jsr grid_isEmptyAt
-			bcs @occupied	; If occupied, noting to do here
-			jsr grid_canInsertValueAt ; sets carry when illegal
-			bcs @not_legal
-				pha
-				lda gridarg_value
-				sta tmp_hint_value
-				pla
-			ina		; Count the possibility
-			cmp #2	; When more than 1, stop trying digits in this cell
-			beq @more_than_1
-@not_legal:
-			dec gridarg_value
-			bne @next_digit
-
-		; Check if we found 1 digit
-		cmp #1
-		beq @found_single
-
-@occupied:
-@more_than_1:
-		inx
-		cpx #9
-		bne @next_x
-
-	iny
-	cpy #9
-	bne @next_y
-
-	; No cell found
-	; TODO : User feedback?
-
-	bra @return
-
-@found_single:
+@found:
+	; Get the coordinates
+	ldx slv_x
+	ldy slv_y
 
 	cpx cursor_grid_x
 	bne @cursor_not_there
@@ -1037,7 +1055,7 @@ proposeHint:
 	bne @cursor_not_there
 
 	; If cursor already there, insert the digit!
-	lda tmp_hint_value
+	lda slv_digit
 	sta gridarg_value
 	stx gridarg_x
 	sty gridarg_y
@@ -1049,12 +1067,15 @@ proposeHint:
 	stx cursor_grid_x
 	sty cursor_grid_y
 
-@return:
-	plp
-	ply
-	plx
-	pla
+	bra @return
 
+
+@not_found:
+	jsr effect_mosaic_pulse
+	; TODO : Message
+
+@return:
+	popall
 	rts
 
 

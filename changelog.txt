@@ -1,4 +1,11 @@
 
+2019-03-??: Version 0.2?
+	- Now also playable with a standard controller. Use L/R to cycle through
+	  valid values for the cell.
+    - Hint function now also detects unique row and column candidates.
+	- Implemented a simple solver (uses hint internally). Can solve most Easy
+	  and Simple puzzles.
+
 2019-03-10: Version 0.1
 	Initial release:
 
