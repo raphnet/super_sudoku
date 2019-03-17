@@ -7,6 +7,7 @@
 	  and Simple puzzles.
 	- Implement a recursize solver
 	- Improved text and menu speed
+	- Implement an in-game clock
 
 2019-03-10: Version 0.1
 	Initial release:
