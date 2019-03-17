@@ -114,6 +114,12 @@
 ; d: Affect BG1
 .define CGADSUB	$2131
 
+
+.define WMDATA	$2180
+.define WMADDL	$2181	; lower 8 bit
+.define WMADDM	$2182	; middle 8 bit
+.define WMADDH	$2183
+
 ; Controller IO/Ports
 
 ; 7-3: not used
@@ -179,6 +185,10 @@
 ; DMA Source address (channel 0)
 .define A1T0L $4302
 .define A1T0H $4303
+.define A1T1L $4312
+.define A1T1H $4313
+.define A1T2L $4322
+.define A1T2H $4323
 
 .define A1T7L $4372
 .define A1T7H $4373
@@ -197,6 +207,10 @@
 ; DMA transfer size & HDMA address register
 .define DAS0L $4305
 .define DAS0H $4306
+.define DAS1L $4315
+.define DAS1H $4316
+.define DAS2L $4325
+.define DAS2H $4326
 .define DAS7L $4375
 .define DAS7H $4376
 
