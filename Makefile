@@ -4,7 +4,7 @@ EMULATOR=bsnes
 PNG2SNES=png2snes -q
 
 # Files included by main.asm. When they change, recompilation must be triggered.
-DEPS=snesregs.inc misc_macros.inc header.inc snes_init.asm text.inc gamepads.inc cursor.inc
+DEPS=snesregs.inc misc_macros.inc header.inc snes_init.asm text.inc gamepads.inc cursor.inc bg1.inc
 
 # note: New objects must also be added to linkfile.lnk
 OBJS=main.o effects.o gamepads.o grid.o puzzles.o sprites.o text.o cursor.o solver.o clock.o bg1.o

@@ -176,7 +176,7 @@ VBlank:
 
 	jsr bg1_sync
 
-;	jsr clock_draw
+	jsr clock_draw
 
 	; Final housekeeping not touching the PPU
 	jsr cursor_dovblank
@@ -603,13 +603,7 @@ grid_screen:
 	jsr bg1_loadGridMap
 
 	; Overwrite the L/R icon for "keypad" when using a NTT Data Keypad
-	A8
-	lda controller_id
-	cmp #CTL_ID_NTT_KEYPAD
-	bne @not_ntt
-	text_drawStringXY "jk" 22 16	; tiles 104 105
-	text_drawStringXY "z{" 22 17	 ; tiles 124 124
-@not_ntt:
+	jsr patchBG1_for_NTT_icon
 
 	XY16
 	A16
@@ -622,6 +616,9 @@ grid_screen:
 	cursor_setStartingTileID 0
 	cursor_setPitch 16 16
 	cursor_jumpToGridXY 4 4 ; Center of the grid
+
+	jsr clock_zero
+	jsr clock_show
 
 	; Disable forced blanking (clear bit 7)
 	; Start with master brightness at 0 (black)
@@ -652,6 +649,7 @@ grid_screen:
 	bcc @grid_solved
 
 	text_clearBox 22 1 8 2
+	jsr clock_start ; or just keep running
 
 	jmp @grid_loop
 
@@ -662,6 +660,7 @@ grid_screen:
 	bra @grid_loop
 
 @grid_solved:
+	jsr clock_stop
 	text_drawStringXY "`abcdefg" 22 1
 	text_drawStringXY "pqrstuvw" 22 2
 ;	text_drawStringXY $80,$81,$82,$83,$84,$85,$86,$87 22 2
@@ -741,6 +740,9 @@ processButtons:
 
 @menu_button_pressed:
 
+	jsr clock_hide
+	jsr clock_stop
+
 	lda cursor_grid_x
 	sta cursor_pos_x_before_menu
 	lda cursor_grid_y
@@ -762,6 +764,7 @@ processButtons:
 	jmp @menu_done
 
 @do_restart_puzzle:
+	jsr clock_zero
 	; read from puzzle_buffer again
 	jsr grid_init_puzzle
 	bra @menu_done
@@ -785,10 +788,11 @@ processButtons:
 	; Reload the grid
 	jsr bg1_loadGridMap
 
-	; Overwrite the L/R icon for "keypad" when using a NTT Data Keypad
-	text_drawStringXY "jk" 22 16	; tiles 104 105
-	text_drawStringXY "z{" 22 17	 ; tiles 124 124
-@not_ntt:
+	jsr patchBG1_for_NTT_icon
+
+	; Recall the clock, and make it run again
+	jsr clock_show
+	jsr clock_start
 
 
 ;	EndVBLANK
@@ -979,6 +983,22 @@ ingame_menu:
 	popall
 
 	rts
+
+patchBG1_for_NTT_icon:
+	pushall
+
+	; Overwrite the L/R icon for "keypad" when using a NTT Data Keypad
+	A8
+	lda controller_id
+	cmp #CTL_ID_NTT_KEYPAD
+	bne @not_ntt
+	text_drawStringXY "jk" 22 16	; tiles 104 105
+	text_drawStringXY "z{" 22 17	 ; tiles 124 124
+@not_ntt:
+
+	popall
+	rts
+
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;

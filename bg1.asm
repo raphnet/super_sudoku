@@ -2,6 +2,7 @@
 .include "snesregs.inc"
 .include "misc_macros.inc"
 .include "zeropage.inc"
+.include "bg1.inc"
 
 .bank 0 slot 1
 
@@ -15,10 +16,6 @@
 
 .section "bg1_code" FREE
 
-.define BG1_DATA_PTR	0
-.define BG1_DATA_BANK	$7F
-.define BG1_DATA_SIZE	32*28*2
-.define BG1_VRAM_WORD_ADDRESS	$3000>>1
 
 bg1_sync:
 	pushall
