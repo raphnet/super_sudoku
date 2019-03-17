@@ -2,6 +2,7 @@
 .include "snesregs.inc"
 .include "misc_macros.inc"
 .include "zeropage.inc"
+.include "grid.inc"
 
 
 .bank 0
@@ -16,6 +17,12 @@
 
 	slv_tmp_x: dw
 	slv_tmp_y: dw
+
+	; An array whose indexes matches gridata. Each element
+	; is a count of how many valid moves there are.
+	slv_num_moves_per_cell: dsw 81
+
+	;slv_tmpval: dw
 .ends
 
 .16BIT
@@ -432,5 +439,219 @@ solver_findSoleCandidate:
 	clc
 	rts
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Populate an array whose indexes matches gridata. Each element
+	; is a count of how many valid moves there are.
+	;
+	; Uses: dp_slv_tmpval
+	;
+	; Output: slv_num_moves_per_cell
+	;
+_solver_buildNumMovesArray:
+	pushall
+
+	AXY16
+
+	lda #slv_num_moves_per_cell
+	sta dp_slv_tmpval
+
+
+	ldy #0
+@next_row:
+	ldx #0
+@next_cell:
+
+	stx gridarg_x
+	sty gridarg_y
+
+	; First check if the cell is occupied. An occupied cell has
+	; no valid moves. It is assumed that it holds the correct value already.
+	lda #0	; prepare a move count of 0
+	jsr grid_isEmptyAt
+	bcs @occupied
+
+	; Count valid moves
+	jsr solver_countValidMovesInCell
+
+	; Retrive the number of valid moves
+	lda slv_num_valid_moves
+
+@occupied:
+	; write it to the array
+	sta (dp_slv_tmpval)
+
+	; advance pointer to next cell
+	inc dp_slv_tmpval
+	inc dp_slv_tmpval
+
+	inx
+	cpx #9
+	bne @next_cell
+
+	iny
+	cpy #9
+	bne @next_row
+
+
+
+	popall
+	rts
+
+
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Find an empty cell, starting at offset X.
+	;
+	; Return with X the offset into griddata
+	;
+	; If none is found, returns with carry set
+	;
+	AXY16
+_solver_findEmptyCell:
+;	ldx #0
+@nextCell:
+	lda griddata, X
+	and #$ff
+	beq @empty_found
+	inx
+	inx
+	cpx #81*2
+	bne @nextCell
+
+	; None found. Re
+	sec
+	rts
+
+@empty_found:
+	clc
+	rts
+
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Check if a given values exists in the neighbors of a cell.
+	;
+	; Arguments:
+	;    -  X : Offset in gridata/neighbor_list
+	;    -  dp_slv_tmpval : Value to look for
+	;
+	; Return with carry set if found, clear otherwise.
+	;
+	AXY16
+_solverCheckNeighborsForValue:
+	phx
+	phy
+
+	; Get the pointer to the list of neighbors for the designated cell
+	lda neighbor_list, X
+	; Store it in the direct page for upcoming indirect acceses
+	sta dp_indirect_tmp1
+
+	ldy #0
+@checknext:
+	lda (dp_indirect_tmp1),Y	; Load offset for neighbor
+	tax							; Move the offset to X to use it
+	lda griddata, X				; Load the value at this position
+	and #$FF
+	cmp dp_slv_tmpval				; Check if it is the value we are looking for
+	beq @foundit				; Yes? Then the move is invalid
+	iny							; Advance to next neighbor in list
+	iny
+	cpy #20*2
+	bne @checknext
+
+	clc
+	ply
+	plx
+	rts
+@foundit:
+	sec
+	ply
+	plx
+	rts
+
+
+	;;;;;;;;
+	;
+	; Recursive routine for solving a sudoku.
+	;
+	; Returns with carry set when all cells are populated.
+	;
+	; X: Current offset in griddata for faster empty cell finding
+	;
+	AXY16
+_solver_bruteforcer:
+	phy
+	phx
+
+	; 1. Find an empty cell.
+	jsr _solver_findEmptyCell
+	bcs @solved	; Carry set means none was found. Puzzle solved.
+
+	; X now holds the offset for the cell. It is used by the neighbor
+	; check in the loop below.
+
+	; 2. Try digits at current position
+	ldy #0 ; First digit to try
+
+@next_value:
+	iny
+	cpy #10
+	beq @triedall
+	; Check if this is a valid move here
+	sty dp_slv_tmpval	; Value to check (arg for subroutine below)
+	jsr _solverCheckNeighborsForValue
+	bcs @next_value	; Carry is set if value is unallowed
+
+	; Value allowed! Insert it.
+	tya
+;	jsr grid_insertHintedValueOffset
+	ora #(HINTED_DIGIT_PAL<<8)
+	sta griddata, X
+
+	; Try recursion.
+	jsr _solver_bruteforcer
+	bcs @solved
+	; Carry clear? Then this was a dead end. Try another digit...
+	bra @next_value
+
+@triedall:
+	; None of the tried digits worked. Clear the cell.
+	;lda #0
+	;jsr grid_insertHintedValueOffset
+	stz griddata, X
+	lda #1
+	sta grid_changed
+
+	clc
+	plx
+	ply
+	rts
+@solved:
+	lda #1
+	sta grid_changed
+
+	plx
+	ply
+	rts
+
+
+solver_bruteForce:
+	pushall
+	AXY16
+
+	jsr _solver_buildNumMovesArray
+
+brk1:
+
+	ldx #0
+	jsr _solver_bruteforcer
+
+	popall
+	rts
 
 .ends

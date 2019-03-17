@@ -76,6 +76,7 @@ bg2_off: db
 bg2_count: db
 
 grid_changed: db ; When non-zero, causes grid_syncToScreen to be called at vblank
+grid_changed_padding: db
 
 tmp_hint_value: dw
 cur_cycled_idx: dw
@@ -149,11 +150,24 @@ VBlank:
 	jsr sprite_sync
 
 
-
 	; Redraw the sudoku grid contents if it changed
 	A8
+/*
+	; When the solver is running, only sync the grid
+	; a few times per second.
+	lda run_solver
+	beq @no_autosync_grid ; not runnning
+	lda framecount
+	and #$f
+	bne @no_autosync_grid
+	lda #1
+	sta grid_changed
+@no_autosync_grid:
+*/
+
 	lda grid_changed
 	beq @noredrawgrid
+@redrawgrid:
 	jsr grid_syncToScreen
 @noredrawgrid:
 	stz grid_changed
@@ -164,7 +178,6 @@ VBlank:
 
 	; Final housekeeping not touching the PPU
 	jsr cursor_dovblank
-
 	jsr readGamepads
 
 	plp
@@ -276,7 +289,7 @@ Start:
 	XY8
 
 	stz grid_changed
-
+	stz run_solver
 
 	jsr gamepads_init
 
@@ -655,6 +668,7 @@ grid_screen:
 
 @run_solver:
 	jsr easySolver
+	jsr bruteForceSolver
 	stz run_solver
 	bra @grid_loop
 
@@ -1019,6 +1033,7 @@ easySolver:
 
 
 bruteForceSolver:
+	jsr solver_bruteForce
 	rts
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

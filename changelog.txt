@@ -5,6 +5,7 @@
     - Hint function now also detects unique row and column candidates.
 	- Implemented a simple solver (uses hint internally). Can solve most Easy
 	  and Simple puzzles.
+	- Implement a recursize solver
 
 2019-03-10: Version 0.1
 	Initial release:
