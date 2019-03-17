@@ -179,14 +179,26 @@
 ; DMA Source address (channel 0)
 .define A1T0L $4302
 .define A1T0H $4303
+
+.define A1T7L $4372
+.define A1T7H $4373
 ; todo: other channels
 
 ; Source bank address (channel 0)
 .define A1B0 $4304
+.define A1B1 $4314
+.define A1B2 $4324
+.define A1B3 $4334
+.define A1B4 $4344
+.define A1B5 $4354
+.define A1B6 $4364
+.define A1B7 $4374
 
 ; DMA transfer size & HDMA address register
 .define DAS0L $4305
 .define DAS0H $4306
+.define DAS7L $4375
+.define DAS7H $4376
 
 
 ;;;;;;;;;;;;;;;;;;;

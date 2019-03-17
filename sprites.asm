@@ -11,7 +11,6 @@
 ; This is a copy of the two tables found in OAM
 oam_table1:	dsb $200 ; 128 4 byte entries
 oam_table2: dsb $20
-
 .ENDS
 
 .section "Sprites" FREE
@@ -28,9 +27,10 @@ sprites_init:
 	XY16
 	A8
 
+	; Init all sprites off screen
 	lda -64
 	ldy #0
-	ldx #64
+	ldx #128
 @lp_x:
 	sta oam_table1, Y 		; X
 	sta oam_table1 + 1, Y	; Y
@@ -41,20 +41,43 @@ sprites_init:
 	dex
 	bne @lp_x
 
-	; sync all sprites : TODO : Use DMA
-
-	lda #0
-@lp:
-	jsr sprite_sync
-	inc A
-	cmp #128
-	bne @lp
-
+	jsr sprite_syncAll
 
 @done:
 
 	popall
 
+	rts
+
+sprite_syncAll:
+	pushall
+	AXY16
+
+	stz OAMADDL
+
+	; selexct DMA mode 2 (write two bytes at 1 address)
+	A8
+	lda #$2
+	sta DMAP7	; use channel 7
+
+	; set low byte address to low8(OAMDATA)
+	lda #<OAMDATA
+	sta BBAD7	; 21xx + A
+
+	; set source address
+	ldx #oam_table1
+	stx A1T7L
+	stz A1B7 ; bank 0 hardcoded!
+
+	; set transfer size
+	ldx #_sizeof_oam_table1+$20
+	stx DAS7L
+
+	; start the transfer!
+	lda #1<<7
+	sta MDMAEN
+
+	popall
 	rts
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -64,6 +87,9 @@ sprites_init:
 	;
 	; Should be called during VBLANK
 sprite_sync:
+	jmp sprite_syncAll
+
+/*
 	pha
 	phx
 	phy
@@ -116,7 +142,7 @@ sprite_sync:
 	pla
 
 	rts
-
+*/
 
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
