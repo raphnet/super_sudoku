@@ -68,6 +68,11 @@
 .define INGAME_MENU_RES_SOLVE	2
 .define INGAME_MENU_RES_TITLE	3
 
+
+.define CURSOR_INGAME_TILE_ID	0
+.define CURSOR_MENU_TILE_ID		4
+.define CURSOR_HIDDEN_TILE_ID	8
+
 .16BIT
 
 .RAMSECTION "main_variables" SLOT RAM_SLOT
@@ -342,7 +347,7 @@ drawPressB:
 	cursor_setGridSize 1 1 ; W H
 	cursor_setScreenOrigin PRESS_B_CURSOR_X PRESS_B_CURSOR_Y
 	cursor_jumpToGridXY 0 0
-	cursor_setStartingTileID 4
+	cursor_setStartingTileID CURSOR_MENU_TILE_ID
 	cursor_setPitch 16 16
 
 
@@ -425,7 +430,7 @@ back_to_step2:
 	cursor_setGridSize 1 2 ; W H
 	cursor_setScreenOrigin MENU1_CURSOR_ORG_X MENU1_CURSOR_ORG_Y
 	cursor_jumpToGridXY 0 0
-	cursor_setStartingTileID 4
+	cursor_setStartingTileID CURSOR_MENU_TILE_ID
 	cursor_setPitch 16 16
 
 
@@ -613,7 +618,7 @@ grid_screen:
 
 	cursor_setGridSize 9 9
 	cursor_setScreenOrigin GRID_CURSOR_ORIGIN_X GRID_CURSOR_ORIGIN_Y
-	cursor_setStartingTileID 0
+	cursor_setStartingTileID CURSOR_INGAME_TILE_ID
 	cursor_setPitch 16 16
 	cursor_jumpToGridXY 4 4 ; Center of the grid
 
@@ -654,9 +659,16 @@ grid_screen:
 	jmp @grid_loop
 
 @run_solver:
+
+	cursor_setStartingTileID CURSOR_HIDDEN_TILE_ID
+
 	jsr easySolver
 	jsr bruteForceSolver
 	stz run_solver
+
+	cursor_setStartingTileID CURSOR_INGAME_TILE_ID
+
+
 	bra @grid_loop
 
 @grid_solved:
@@ -801,7 +813,7 @@ processButtons:
 
 	cursor_setGridSize 9 9
 	cursor_setScreenOrigin GRID_CURSOR_ORIGIN_X GRID_CURSOR_ORIGIN_Y
-	cursor_setStartingTileID 0
+	cursor_setStartingTileID CURSOR_INGAME_TILE_ID
 	cursor_setPitch 16 16
 ;	cursor_jumpToGridXY 4 4 ; Center of the grid
 	; Bring the cursor back to where it was before
@@ -928,7 +940,7 @@ ingame_menu:
 	cursor_setGridSize 1 4 ; W H
 	cursor_setScreenOrigin MENU4_CURSOR_ORG_X MENU4_CURSOR_ORG_Y
 	cursor_setPitch 16 16
-	cursor_setStartingTileID 4
+	cursor_setStartingTileID CURSOR_MENU_TILE_ID
 	cursor_jumpToGridXY 0 0
 
 	A8
