@@ -3,6 +3,7 @@
 .include "misc_macros.inc"
 .include "zeropage.inc"
 .include "puzzles.inc"
+.include "grid.inc"
 
 .bank 0 slot 1
 
@@ -33,8 +34,10 @@
 
 .section "Grid" FREE
 
-.define INITIAL_DIGIT_PAL	($20 | ($4<<2))
-.define ADDED_DIGIT_PAL	($20 | ($5<<2))
+; now in grid.inc
+;.define INITIAL_DIGIT_PAL	($20 | ($4<<2))
+;.define ADDED_DIGIT_PAL	($20 | ($5<<2))
+;.define HINTED_DIGIT_PAL	($20 | ($6<<2))
 
 .define GRID_BGMAP_PITCH	32
 .define GRID_UPPER_LEFT_Y	6
@@ -386,6 +389,78 @@ grid_canInsertValueAt:
 	pla
 	rts
 
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Insert a value at the specified offset.
+	;
+	; Used by solver.asm
+	;
+	; Arguments:
+	;
+	; - X : Offset in grid_value
+	; - A : Value
+	;
+	; Destroys: A
+	;
+	AXY16
+grid_insertHintedValueOffset:
+	ora #(HINTED_DIGIT_PAL<<8)
+	sta griddata, X
+;	lda #1 ; Use A. When clearing a cell the grid won't update, but it does not matter.
+	sta grid_changed
+	rts
+
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Insert a value at the current cursor position
+	;
+	; Input: gridarg_value (B)
+	;
+	;
+grid_insertHintedValueAt:
+	pha
+	phx
+	phy
+	php
+
+	A16
+	XY16
+
+	; Multiply by 18 (grid pitch)
+	lda gridarg_y
+	asl ; x2
+	asl ; x4
+	asl ; x8
+	asl ; x16
+	adc gridarg_y ; 18x = 16x + x + x
+	adc gridarg_y
+
+	; Add X (2x)
+	adc gridarg_x
+	adc gridarg_x
+
+	; A now contains the offset into griddata. Move
+	; to Y to use as index
+	tay
+
+	A8
+	lda gridarg_value
+	clc
+	sta griddata, Y
+	lda #HINTED_DIGIT_PAL
+	iny
+	sta griddata, Y
+
+	; Trigger a redraw
+	lda #1
+	sta grid_changed
+
+	plp
+	ply
+	plx
+	pla
+	rts
 
 
 

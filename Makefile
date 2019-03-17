@@ -17,7 +17,7 @@ $(ROMFILE): $(OBJS) linkfile.lnk
 	wlalink -S linkfile.lnk $@ > wlalink.log
 
 # main has more dependencies (graphics, etc)
-main.o: main.asm $(DEPS) main.vra main.cgr pattern.cgr pattern.vra title.map grid.map sprites.cgr sprites.vra numbers.cgr numbers.vra numbers_green.cgr
+main.o: main.asm $(DEPS) main.vra main.cgr pattern.cgr pattern.vra title.map grid.map sprites.cgr sprites.vra numbers.cgr numbers.vra numbers_green.cgr numbers_yellow.cgr
 	$(WLA65816) -o $@ $<
 
 # rule for other object files
@@ -56,6 +56,9 @@ numbers.cgr: tilemaps/numbers.png
 
 numbers_green.cgr: tilemaps/numbers_green.png
 	$(PNG2SNES) --bitplanes 2 --tilesize 8 --binary $< --output numbers_green
+
+numbers_yellow.cgr: tilemaps/numbers_yellow.png
+	$(PNG2SNES) --bitplanes 2 --tilesize 8 --binary $< --output numbers_yellow
 
 numbers.vra: tilemaps/numbers.png
 	$(PNG2SNES) --bitplanes 2 --tilesize 8 --binary $< --output numbers
