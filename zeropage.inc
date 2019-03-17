@@ -13,7 +13,12 @@
 	; Holds a temp. value for the solver
 	dp_slv_tmpval: dw
 
-	dp_slv_emptyCells: dsw 81
+	;dp_slv_emptyCells: dsw 82
+	dp_slv_sorttmp: dw
+;	dp_slv_nextEmpty: dw
+
+;	dp_rescan: dw
+	griddata: dsw 81
 .ende
 
 

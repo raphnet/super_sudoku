@@ -8,7 +8,7 @@
 .bank 0 slot 1
 
 .ramsection "grid_variables" SLOT RAM_SLOT
-	griddata: dsw 81
+;	griddata: dsw 81
 
 	gridarg_value: db
 	gridarg_padding: db
@@ -524,7 +524,7 @@ grid_init_blank:
 	;
 	pushall
 
-	Memset griddata 0 _sizeof_griddata
+	Memset griddata 0 81*2
 
 	popall
 	rts
@@ -554,7 +554,7 @@ grid_init_puzzle:
 
 	inx
 
-	cpy #_sizeof_griddata
+	cpy #81*2 ; _sizeof_griddata
 	bne @next_byte
 
 
