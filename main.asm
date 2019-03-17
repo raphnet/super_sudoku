@@ -1008,7 +1008,7 @@ easySolver:
 	sta gridarg_value
 	stx gridarg_x
 	sty gridarg_y
-	jsr grid_insertValueAt
+	jsr grid_insertHintedValueAt
 
 	bra @next
 
@@ -1059,7 +1059,7 @@ proposeHint:
 	sta gridarg_value
 	stx gridarg_x
 	sty gridarg_y
-	jsr grid_insertValueAt
+	jsr grid_insertHintedValueAt
 
 @cursor_not_there:
 	; Move pointer to cell, but don't say which number
@@ -1264,7 +1264,7 @@ PALETTE:
 	.incbin "main.cgr"
 	.incbin "numbers.cgr"
 	.incbin "numbers_green.cgr"
-	.incbin "numbers_green.cgr"
+	.incbin "numbers_yellow.cgr"
 	.incbin "numbers_green.cgr"
 	.incbin "pattern.cgr"
 
