@@ -441,6 +441,58 @@ solver_findSoleCandidate:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+/*
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Setup a list of cell indices (for griddata) in dp_slv_emptyCells in
+	; increasing number of possible moves. Celles with 0 moves omitted.
+	;
+	; The last entry is set to 0xFFFF
+	;
+_solver_prepareEmptyCellList:
+
+	; First count how many valid moves in each cell, storing the result
+	; in slv_num_moves_per_cell in the same order as griddata
+	jsr _solver_buildNumMovesArray
+	pushall
+	AXY16
+
+
+	; Now create a sorted (1 to 9) array of griddata indices.
+
+	ldy #0 ; Offset into dp_slv_emptyCells
+
+	lda #9
+	sta dp_slv_sorttmp
+@next_count:
+	ldx #0	; Offset into griddata
+@nextcell:
+	; Load the number of moves for the current cell
+	lda slv_num_moves_per_cell, X
+	beq @skip
+;	cmp dp_slv_sorttmp
+;	bne @skip
+
+	stx dp_slv_emptyCells, Y
+	iny
+	iny
+
+@skip:
+	inx
+	inx
+	cpx #81*2
+	bne @nextcell
+
+;	dec dp_slv_sorttmp
+;	bpl @next_count
+
+	; End of list marker
+	ldx #$ffff
+	stx dp_slv_emptyCells, Y
+
+	popall
+	rts
+
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
 	; Populate an array whose indexes matches gridata. Each element
@@ -496,11 +548,44 @@ _solver_buildNumMovesArray:
 	bne @next_row
 
 
-
 	popall
 	rts
 
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Find an empty cell, starting at offset X.
+	;
+	; Return with X the offset into griddata
+	;
+	; If none is found, returns with carry set
+	;
+	AXY16
+_solver_findEmptyCellNew:
+	ldx #0
+	A8
+@nextCell:
+	ldy dp_slv_emptyCells, X
+	bmi @nomore ; Stop at $ffff
 
+	lda griddata, Y
+	beq @empty_found
+	inx
+	inx
+	bra @nextCell
+
+@nomore:
+	A16
+	; None found. Return with carry set.
+	sec
+	rts
+
+@empty_found:
+	A16
+	tyx
+	clc
+	rts
+
+*/
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
@@ -551,25 +636,26 @@ _solverCheckNeighborsForValue:
 	; Store it in the direct page for upcoming indirect acceses
 	sta dp_indirect_tmp1
 
-	ldy #0
+	ldy #20*2
 @checknext:
+	dey
+	dey
+	bmi @not_found
 	lda (dp_indirect_tmp1),Y	; Load offset for neighbor
 	tax							; Move the offset to X to use it
 	lda griddata, X				; Load the value at this position
 	and #$FF
 	cmp dp_slv_tmpval				; Check if it is the value we are looking for
-	beq @foundit				; Yes? Then the move is invalid
-	iny							; Advance to next neighbor in list
-	iny
-	cpy #20*2
 	bne @checknext
 
-	clc
+@foundit:
+	sec
 	ply
 	plx
 	rts
-@foundit:
-	sec
+
+@not_found:
+	clc
 	ply
 	plx
 	rts
@@ -589,18 +675,30 @@ _solver_bruteforcer:
 	phx
 
 	; 1. Find an empty cell.
-	jsr _solver_findEmptyCell
-	bcs @solved	; Carry set means none was found. Puzzle solved.
+	;jsr _solver_findEmptyCell2
+	;bcs @solved	; Carry set means none was found. Puzzle solved.
+
+	; inlined version of the above
+	@nextCell:
+		lda griddata, X
+		and #$ff
+		beq @empty_found
+		inx
+		inx
+		cpx #81*2
+		bne @nextCell
+		bra @solved
+	@empty_found:
+
 
 	; X now holds the offset for the cell. It is used by the neighbor
 	; check in the loop below.
 
 	; 2. Try digits at current position
-	ldy #0 ; First digit to try
+	ldy #10 ; First digit to try
 
 @next_value:
-	iny
-	cpy #10
+	dey
 	beq @triedall
 	; Check if this is a valid move here
 	sty dp_slv_tmpval	; Value to check (arg for subroutine below)
@@ -644,11 +742,14 @@ solver_bruteForce:
 	pushall
 	AXY16
 
-	jsr _solver_buildNumMovesArray
+	; this was for use with _solver_findEmptyCellNew but
+	; it seems slower.
+	;	jsr _solver_prepareEmptyCellList
 
 brk1:
 
 	ldx #0
+;	stx dp_slv_nextEmpty
 	jsr _solver_bruteforcer
 
 	popall
