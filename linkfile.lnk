@@ -8,3 +8,5 @@ puzzles.o
 text.o
 cursor.o
 solver.o
+clock.o
+bg1.o
