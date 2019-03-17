@@ -19,6 +19,9 @@
 
 ;	dp_rescan: dw
 	griddata: dsw 81
+
+	dp_text_ptr: dsb 3
+	dp_text_tmp: dw
 .ende
 
 

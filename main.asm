@@ -71,7 +71,6 @@
 .16BIT
 
 .RAMSECTION "main_variables" SLOT RAM_SLOT
-var_test1: db
 bg2_off: db
 bg2_count: db
 
@@ -95,6 +94,7 @@ cursor_pos_y_before_menu: dw
 ingame_menu_result: dw
 
 run_solver: dw
+
 .ENDS
 
 
@@ -149,7 +149,6 @@ VBlank:
 	lda #0
 	jsr sprite_sync
 
-
 	; Redraw the sudoku grid contents if it changed
 	A8
 /*
@@ -175,10 +174,14 @@ VBlank:
 	; Process effects
 	jsr effects_dovblank
 
+	jsr bg1_sync
+
+;	jsr clock_draw
 
 	; Final housekeeping not touching the PPU
 	jsr cursor_dovblank
 	jsr readGamepads
+	jsr clock_tick
 
 	plp
 	ply
@@ -293,6 +296,8 @@ Start:
 
 	jsr gamepads_init
 
+	jsr clock_initreset
+
 	EnableNMI
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -302,7 +307,7 @@ title_screen:
 	ForceVBLANK
 
 	; BG1
-	LoadVRAM TITLEBG BG1_TILE_MAP_OFFSET	_sizeof_TITLEBG
+	jsr bg1_loadTitleMap
 
 	; BG2
 	Fill_VRAM BG2_TILE_MAP_OFFSET ((2<<BGMAPENT_PALSHIFT)|0) 	32*32
@@ -406,13 +411,10 @@ titlescreen_loop:
 	;; Step 2 of title. Select empty grid or built in puzzle
 
 	; Remove 'PRESS B TO START' box
-	wai
 	text_clearBox PRESS_B_BOX_X PRESS_B_BOX_Y PRESS_B_BOX_W PRESS_B_BOX_H
 
 back_to_step2:
-	wai
 	text_drawBox MENU1_BOX_X MENU1_BOX_Y MENU1_BOX_W MENU1_BOX_H
-	wai
 	text_drawStringXY "SELECT MODE:" 4 17
 	text_drawStringXY "BUILT-IN PUZZLE" 8 20
 	text_drawStringXY "EMPTY GRID" 8 22
@@ -466,9 +468,7 @@ select_level_Step:
 	A16
 
 	; Overwrite previous menu text, and grow by one line
-	wai
 	text_drawBox MENU1_BOX_X MENU1_BOX_Y MENU1_BOX_W MENU1_BOX_H+1
-	wai
 	text_drawStringXY "SIMPLE PUZZLE"		MENU2_TEXT_X 	MENU2_TEXT_FIRST_LINE_Y
 	text_drawStringXY "EASY PUZZLE" 		MENU2_TEXT_X 	MENU2_TEXT_FIRST_LINE_Y+2
 	text_drawStringXY "INTERMEDIATE PUZZLE" MENU2_TEXT_X 	MENU2_TEXT_FIRST_LINE_Y+4
@@ -514,39 +514,26 @@ select_level_Step:
 
 
 prepare_ask_puzzle_id:
-	wai
 	text_clearBox MENU1_BOX_X MENU1_BOX_Y MENU1_BOX_W MENU1_BOX_H+1
-	wai
 	text_drawBox MENU3_BOX_X MENU3_BOX_Y MENU3_BOX_W MENU3_BOX_H
-
-	wai
 	text_drawStringXY " 1    2    3    4    5"		MENU3_TEXT_X 	MENU3_TEXT_Y
 	text_drawStringXY " 6    7    8    9   10"		MENU3_TEXT_X 	MENU3_TEXT_Y+1
-	wai
 	text_drawStringXY "11   12   13   14   15"		MENU3_TEXT_X 	MENU3_TEXT_Y+2
 	text_drawStringXY "16   17   18   19   20"		MENU3_TEXT_X 	MENU3_TEXT_Y+3
-	wai
 	text_drawStringXY "21   22   23   24   25"		MENU3_TEXT_X 	MENU3_TEXT_Y+4
 	text_drawStringXY "26   27   28   29   30"		MENU3_TEXT_X 	MENU3_TEXT_Y+5
-	wai
 	text_drawStringXY "31   32   33   34   35"		MENU3_TEXT_X 	MENU3_TEXT_Y+6
 	text_drawStringXY "36   37   38   39   40"		MENU3_TEXT_X 	MENU3_TEXT_Y+7
-	wai
 	text_drawStringXY "41   42   43   44   45"		MENU3_TEXT_X 	MENU3_TEXT_Y+8
 	text_drawStringXY "46   47   48   49   50"		MENU3_TEXT_X 	MENU3_TEXT_Y+9
-	wai
 	text_drawStringXY "51   52   53   54   55"		MENU3_TEXT_X 	MENU3_TEXT_Y+10
 	text_drawStringXY "56   57   58   59   60"		MENU3_TEXT_X 	MENU3_TEXT_Y+11
-	wai
 	text_drawStringXY "61   62   63   64   65"		MENU3_TEXT_X 	MENU3_TEXT_Y+12
 	text_drawStringXY "66   67   68   69   70"		MENU3_TEXT_X 	MENU3_TEXT_Y+13
-	wai
 	text_drawStringXY "71   72   73   74   75"		MENU3_TEXT_X 	MENU3_TEXT_Y+14
 	text_drawStringXY "76   77   78   79   80"		MENU3_TEXT_X 	MENU3_TEXT_Y+15
-	wai
 	text_drawStringXY "81   82   83   84   85"		MENU3_TEXT_X 	MENU3_TEXT_Y+16
 	text_drawStringXY "86   87   88   89   90"		MENU3_TEXT_X 	MENU3_TEXT_Y+17
-	wai
 	text_drawStringXY "91   92   93   94   95"		MENU3_TEXT_X 	MENU3_TEXT_Y+18
 	text_drawStringXY "96   97   98   99  100"		MENU3_TEXT_X 	MENU3_TEXT_Y+19
 
@@ -578,7 +565,9 @@ prepare_ask_puzzle_id:
 	; This is a quick and dirty way to restore it..
 	wai
 	ForceVBLANK
-	LoadVRAM TITLEBG BG1_TILE_MAP_OFFSET	_sizeof_TITLEBG
+
+	jsr bg1_loadTitleMap
+
 	EndVBLANK
 
 	jsr clearEvents
@@ -611,7 +600,8 @@ grid_screen:
 	ForceVBLANK
 
 	; Load the grid
-	LoadVRAM GRIDBG BG1_TILE_MAP_OFFSET	32*32*2
+	jsr bg1_loadGridMap
+
 	; Overwrite the L/R icon for "keypad" when using a NTT Data Keypad
 	A8
 	lda controller_id
@@ -661,7 +651,6 @@ grid_screen:
 	jsr grid_checkIfSolved
 	bcc @grid_solved
 
-	wai
 	text_clearBox 22 1 8 2
 
 	jmp @grid_loop
@@ -673,7 +662,6 @@ grid_screen:
 	bra @grid_loop
 
 @grid_solved:
-	wai
 	text_drawStringXY "`abcdefg" 22 1
 	text_drawStringXY "pqrstuvw" 22 2
 ;	text_drawStringXY $80,$81,$82,$83,$84,$85,$86,$87 22 2
@@ -695,7 +683,6 @@ rts
 	sta gridarg_y
 	jsr solver_countValidMovesInCell
 
-	wai
 	text_clearBox 1 1 9 1
 
 	ldx #1
@@ -794,8 +781,9 @@ processButtons:
 	wai
 	ForceVBLANK
 	EnableLayers $17 ; reenable puzzle numbers
+
 	; Reload the grid
-	LoadVRAM GRIDBG BG1_TILE_MAP_OFFSET	32*32*2
+	jsr bg1_loadGridMap
 
 	; Overwrite the L/R icon for "keypad" when using a NTT Data Keypad
 	text_drawStringXY "jk" 22 16	; tiles 104 105
@@ -920,14 +908,13 @@ ingame_menu:
 	XY16
 
 	wai
-	LoadVRAM TITLEBG BG1_TILE_MAP_OFFSET	_sizeof_TITLEBG
+
+	jsr bg1_loadTitleMap
 
 	wai
 	EnableLayers $13 ; disable puzzle numbers layer
 
-	wai
 	text_drawBox MENU4_BOX_X MENU4_BOX_Y MENU4_BOX_W MENU4_BOX_H
-	wai
 
 	text_drawStringXY "BACK TO PUZZLE"		MENU4_TEXT_X 	MENU4_TEXT_Y
 	text_drawStringXY "RESTART PUZZLE"		MENU4_TEXT_X 	MENU4_TEXT_Y+2
