@@ -1,5 +1,5 @@
 
-2019-03-??: Version 0.2?
+2019-03-17: Version 0.2
 	- Now also playable with a standard controller. Use L/R to cycle through
 	  valid values for the cell.
     - Hint function now also detects unique row and column candidates.

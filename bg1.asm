@@ -60,7 +60,6 @@ bg1_sync:
 	popall
 	rts
 
-
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
 	; Load the title map from ROM and copy it to VRAM
