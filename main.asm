@@ -16,6 +16,8 @@
 .define BUTTON_PREV_VALUE	CTL_WORD0_L ; cycle to prev. valid value
 .define BUTTON_NEXT_VALUE	CTL_WORD0_R ; cycle to next valid value
 
+.define BUTTON_CANCEL_SOLVER CTL_WORD0_START|CTL_WORD0_A
+
 ; Offset for position displaying the cursor centered on 0,0 (over game grid)
 .define GRID_CURSOR_ORIGIN_X	8
 .define GRID_CURSOR_ORIGIN_Y	31
@@ -99,6 +101,7 @@ cursor_pos_y_before_menu: dw
 ingame_menu_result: dw
 
 run_solver: dw
+cancel_solver: dw
 
 .ENDS
 
@@ -154,20 +157,23 @@ VBlank:
 	lda #0
 	jsr sprite_sync
 
-	; Redraw the sudoku grid contents if it changed
 	A8
-/*
+
 	; When the solver is running, only sync the grid
 	; a few times per second.
 	lda run_solver
-	beq @no_autosync_grid ; not runnning
-	lda framecount
-	and #$f
-	bne @no_autosync_grid
+	beq @solver_not_running
+
+	A16
+
+	ldx #0 ; First word only
+	jsr getEvents ; returns 16 bits
+	bit #BUTTON_CANCEL_SOLVER
+	beq @solver_not_running
 	lda #1
-	sta grid_changed
-@no_autosync_grid:
-*/
+	sta cancel_solver
+@solver_not_running:
+	A8
 
 	lda grid_changed
 	beq @noredrawgrid
@@ -221,7 +227,7 @@ Start:
 	A8
 	XY16
 
-	; Set Video Mode 1, 8x8 tiles, 4 color BG1/BG2/BG3/BG4
+	; Set Video Mode 1, 8x8 tiles, 16-color BG1/BG2, 4-color BG3
 	lda #$09
 	sta BGMODE
 
@@ -648,6 +654,7 @@ grid_screen:
 
 	A16
 	stz run_solver
+	stz cancel_solver
 	A8
 	;;;;;;; Grid loop
 @grid_loop:
@@ -670,16 +677,32 @@ grid_screen:
 
 @run_solver:
 
+	A16
+	stz cancel_solver
+	A8
+
 	cursor_setStartingTileID CURSOR_HIDDEN_TILE_ID
 
 	jsr easySolver
+	lda cancel_solver
+	bne @solving_cancelled
+
 	jsr bruteForceSolver
+	lda cancel_solver
+	bne @solving_cancelled
+
 	stz run_solver
 
 	cursor_setStartingTileID CURSOR_INGAME_TILE_ID
 
 
 	bra @grid_loop
+
+@solving_cancelled:
+	stz run_solver
+	cursor_setStartingTileID CURSOR_INGAME_TILE_ID
+	jsr grid_removeBruteForced
+	jmp @grid_loop
 
 @grid_solved:
 	jsr clock_isStopped
@@ -1043,9 +1066,16 @@ patchBG1_for_NTT_icon:
 easySolver:
 	pushall
 
+	AXY16
+
 @next:
 	wai
 
+	ldx #0 ; First word only
+	jsr getEvents ; returns 16 bits
+
+	bit #BUTTON_CANCEL_SOLVER
+	bne @cancel
 
 	jsr solver_findSoleCandidate
 	bcc @found
@@ -1068,6 +1098,10 @@ easySolver:
 
 	bra @next
 
+@cancel:
+	A16
+	lda #1
+	sta cancel_solver
 @not_found:
 
 	popall
@@ -1346,7 +1380,7 @@ PALETTE:
 	.incbin "numbers.cgr"
 	.incbin "numbers_green.cgr"
 	.incbin "numbers_yellow.cgr"
-	.incbin "numbers_green.cgr"
+	.incbin "numbers_orange.cgr"
 	.incbin "pattern.cgr"
 
 PALETTE_BG3:

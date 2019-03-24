@@ -1,5 +1,7 @@
 2019-03-??: Version 0.3
 	- Added sound effects.
+	- Digits found by bruteforcing shown in Orange (those found by logic: Yellow)
+	- Solver can now be stopped by pushing START or A (delete)
 
 2019-03-17: Version 0.2
 	- Now also playable with a standard controller. Use L/R to cycle through

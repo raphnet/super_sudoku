@@ -674,6 +674,9 @@ _solver_bruteforcer:
 	phy
 	phx
 
+	lda cancel_solver
+	bne @triedall
+
 	; 1. Find an empty cell.
 	;jsr _solver_findEmptyCell2
 	;bcs @solved	; Carry set means none was found. Puzzle solved.
@@ -708,7 +711,7 @@ _solver_bruteforcer:
 	; Value allowed! Insert it.
 	tya
 ;	jsr grid_insertHintedValueOffset
-	ora #(HINTED_DIGIT_PAL<<8)
+	ora #(BRUTEFORCED_DIGIT_PAL<<8)
 	sta griddata, X
 
 	; Try recursion.

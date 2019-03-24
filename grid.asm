@@ -38,6 +38,7 @@
 ;.define INITIAL_DIGIT_PAL	($20 | ($4<<2))
 ;.define ADDED_DIGIT_PAL	($20 | ($5<<2))
 ;.define HINTED_DIGIT_PAL	($20 | ($6<<2))
+;.define BRUTEFORCED_DIGIT_PAL	($20 | ($7<<2))
 
 .define GRID_BGMAP_PITCH	32
 .define GRID_UPPER_LEFT_Y	6
@@ -516,12 +517,37 @@ grid_insertValueAt:
 	pla
 	rts
 
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Remove the digits that were added by the bruteforce solver.
+	;
+grid_removeBruteForced:
+	pushall
 
-grid_init_blank:
+	AXY16
+
+	ldx #0
+@lp:
+	lda griddata, X
+	and #$ff00
+	cmp #BRUTEFORCED_DIGIT_PAL
+	bne @skip
+	stz griddata, X
+@skip:
+	inx
+	inx
+	cpx #81*2
+	bne @lp
+
+	popall
+
+	rts
+
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
 	; Init the grid data to all empty cells.
 	;
+grid_init_blank:
 	pushall
 
 	Memset griddata 0 81*2
