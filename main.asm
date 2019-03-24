@@ -303,6 +303,8 @@ Start:
 
 	jsr clock_initreset
 
+	jsr sound_loadApu
+
 	EnableNMI
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -330,6 +332,7 @@ title_screen:
 
 title_screen_from_step1:
 	jsr drawPressB
+	jsr sound_effect_back
 	jmp titlescreen_loop
 
 
@@ -371,7 +374,7 @@ titlescreen_loop:
 
 	; Now stay here until B is pressed. This first button press
 	; is used to choose which controller port will be used from there.
-@title_loop
+@title_loop:
 	wai
 
 	A16
@@ -408,6 +411,8 @@ titlescreen_loop:
 	sta controller_id
 
 @controller_select_done:
+	jsr sound_effect_menuselect
+
 	A16
 	; From this point on, functions must be called indirectly.
 	jsr clearEvents
@@ -459,6 +464,7 @@ back_to_step2:
 	jmp title_screen_from_step1
 
 @choice_made:
+	jsr sound_effect_menuselect
 	; Start with an empty puzzle
 	jsr puzzles_loadEmpty
 
@@ -503,10 +509,12 @@ select_level_Step:
 
 @back_to_step2:
 	text_clearBox MENU1_BOX_X MENU1_BOX_Y MENU1_BOX_W MENU1_BOX_H+1
+	jsr sound_effect_back
 	jmp back_to_step2
 
 
 @choice_made:
+	jsr sound_effect_menuselect
 	jsr clearEvents
 
 	A16
@@ -576,10 +584,12 @@ prepare_ask_puzzle_id:
 	EndVBLANK
 
 	jsr clearEvents
+	jsr sound_effect_back
 	jmp select_level_Step
 
 @done_puzzle_id_select:
 
+	jsr sound_effect_menuselect
 	; ID = cursor_grid_y * 5 + cursor_grid_x
 	A16
 	lda #0
@@ -672,10 +682,19 @@ grid_screen:
 	bra @grid_loop
 
 @grid_solved:
+	jsr clock_isStopped
+	bcc @already_drawn
+
+	jsr sound_effect_solved
+
 	jsr clock_stop
+
 	text_drawStringXY "`abcdefg" 22 1
 	text_drawStringXY "pqrstuvw" 22 2
 ;	text_drawStringXY $80,$81,$82,$83,$84,$85,$86,$87 22 2
+
+@already_drawn:
+
 	jmp @grid_loop
 
 
@@ -917,6 +936,8 @@ processButtons:
 ingame_menu:
 	pushall
 
+	jsr sound_effect_click
+
 	jsr effect_fadeout
 	ForceVBLANK
 
@@ -966,6 +987,7 @@ ingame_menu:
 	bra @ingame_menu_loop
 
 @choice_made:
+	jsr sound_effect_back
 
 	;	return values are defined to match menu order
 	lda cursor_grid_y
@@ -979,6 +1001,7 @@ ingame_menu:
 	bra @cleanup
 
 @invalid_menu_choice:
+	jsr sound_effect_error
 	jsr effect_mosaic_pulse
 	jsr clearEvents
 	bra @ingame_menu_loop
@@ -1093,6 +1116,9 @@ proposeHint:
 	sta gridarg_value
 	stx gridarg_x
 	sty gridarg_y
+
+	jsr sound_effect_write
+
 	jsr grid_insertHintedValueAt
 
 @cursor_not_there:
@@ -1105,6 +1131,7 @@ proposeHint:
 
 
 @not_found:
+	jsr sound_effect_error
 	jsr effect_mosaic_pulse
 	; TODO : Message
 
@@ -1261,11 +1288,31 @@ insertValueAtCursor
 	jsr grid_canInsertValueAt
 	bcs @error
 
+	; Check if we want to erase or write
+	cpx #0
+	beq @erasing_value
+
+@writing_value:
+	; Do it
 	jsr grid_insertValueAt
+	; Play sound
+	jsr sound_effect_write
+
+
+@erasing_value:
+	jsr grid_isEmptyAt
+	bcc @done	; already empty. Do nothing.
+
+	; Do it (write 0 = erase)
+	jsr grid_insertValueAt
+	; Play sound
+	jsr sound_effect_erase
+
 	bra @done
 
 @error:
 
+	jsr sound_effect_error
 	jsr effect_mosaic_pulse
 
 @done:

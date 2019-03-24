@@ -7,7 +7,7 @@ PNG2SNES=png2snes -q
 DEPS=snesregs.inc misc_macros.inc header.inc snes_init.asm text.inc gamepads.inc cursor.inc bg1.inc
 
 # note: New objects must also be added to linkfile.lnk
-OBJS=main.o effects.o gamepads.o grid.o puzzles.o sprites.o text.o cursor.o solver.o clock.o bg1.o
+OBJS=main.o effects.o gamepads.o grid.o puzzles.o sprites.o text.o cursor.o solver.o clock.o bg1.o sound.o
 
 ROMFILE=super_sudoku.sfc
 
@@ -28,6 +28,9 @@ run: $(ROMFILE)
 	$(EMULATOR) $(ROMFILE)
 
 puzzles.o: puzzles.asm puzzles/simple.bin puzzles/easy.bin puzzles/intermediate.bin puzzles/expert.bin
+	$(WLA65816) -o $@ $<
+
+sound.o: sound.asm sound/sndcode.bin
 	$(WLA65816) -o $@ $<
 
 grid.o: grid.asm neighbors.asm
@@ -65,6 +68,9 @@ numbers.vra: tilemaps/numbers.png
 
 puzzles/%.bin: puzzles/%.txt utils/puzzletxt2bin
 	utils/puzzletxt2bin $< $@
+
+sound/sndcode.bin: sound/main.asm
+	$(MAKE) -C sound
 
 # Tiled .TMX -> .CSV
 %.csv: tilemaps/%.tmx

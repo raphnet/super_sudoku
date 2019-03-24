@@ -115,6 +115,11 @@
 .define CGADSUB	$2131
 
 
+.define APUIO0	$2140
+.define APUIO1	$2141
+.define APUIO2	$2142
+.define APUIO3	$2143
+
 .define WMDATA	$2180
 .define WMADDL	$2181	; lower 8 bit
 .define WMADDM	$2182	; middle 8 bit

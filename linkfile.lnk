@@ -10,3 +10,4 @@ cursor.o
 solver.o
 clock.o
 bg1.o
+sound.o

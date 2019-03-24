@@ -103,6 +103,29 @@ clock_stop:
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
+	; Check if clock is running. Returns with CF set if running
+	;
+clock_isStopped:
+	pha
+	php
+
+	A8
+	lda clk_running
+	bne @running
+
+@not_running:
+	plp
+	pla
+	clc
+	rts
+@running:
+	plp
+	pla
+	sec
+	rts
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
 	; Reset time to zero
 	;
 clock_zero:
