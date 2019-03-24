@@ -1069,12 +1069,7 @@ easySolver:
 	AXY16
 
 @next:
-	wai
-
-	ldx #0 ; First word only
-	jsr getEvents ; returns 16 bits
-
-	bit #BUTTON_CANCEL_SOLVER
+	lda cancel_solver
 	bne @cancel
 
 	jsr solver_findSoleCandidate
@@ -1099,9 +1094,6 @@ easySolver:
 	bra @next
 
 @cancel:
-	A16
-	lda #1
-	sta cancel_solver
 @not_found:
 
 	popall
