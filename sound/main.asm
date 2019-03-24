@@ -44,14 +44,14 @@
 .define ENVX	$08 ; Present value of evelope which DSP rewrittes at each Ts.
 .define OUTX	$09 ; Value after envelope multiplication & before VOL multiplication (present wave height value)
 
-.define CHN0_OFF	$10 * 0
-.define CHN1_OFF	$10 * 1
-.define CHN2_OFF	$10 * 2
-.define CHN3_OFF	$10 * 3
-.define CHN4_OFF	$10 * 4
-.define CHN5_OFF	$10 * 5
-.define CHN6_OFF	$10 * 6
-.define CHN7_OFF	$10 * 7
+.define CHN0_OFF	$00
+.define CHN1_OFF	$10
+.define CHN2_OFF	$20
+.define CHN3_OFF	$30
+.define CHN4_OFF	$40
+.define CHN5_OFF	$50
+.define CHN6_OFF	$60
+.define CHN7_OFF	$70
 
 ;; Global / common register
 .define MVOL_L	$0c	; Main Volume (L)
@@ -114,9 +114,67 @@ main:
 	writeDspReg DIR >source_directory
 	writeDspReg MVOL_L 96
 	writeDspReg MVOL_R 96
+	writeDspReg EVOL_L 0
+	writeDspReg EVOL_R 0
 
 	writeDspReg FLG FLG_ECHO_DIS
 
+	; Init all voices in silence`
+
+	writeDspReg SCRN+CHN0_OFF 0
+	writeDspReg VOL_L+CHN0_OFF 0
+	writeDspReg VOL_R+CHN0_OFF 0
+	writeDspReg16 ADSR1+CHN0_OFF 0
+	writeDspReg GAIN+CHN0_OFF 0
+
+	writeDspReg SCRN+CHN1_OFF 0
+	writeDspReg VOL_L+CHN1_OFF 0
+	writeDspReg VOL_R+CHN1_OFF 0
+	writeDspReg16 ADSR1+CHN1_OFF 0
+	writeDspReg GAIN+CHN1_OFF 0
+
+	writeDspReg SCRN+CHN2_OFF 0
+	writeDspReg VOL_L+CHN2_OFF 0
+	writeDspReg VOL_R+CHN2_OFF 0
+	writeDspReg16 ADSR1+CHN2_OFF 0
+	writeDspReg GAIN+CHN2_OFF 0
+
+	writeDspReg SCRN+CHN3_OFF 0
+	writeDspReg VOL_L+CHN3_OFF 0
+	writeDspReg VOL_R+CHN3_OFF 0
+	writeDspReg16 ADSR1+CHN3_OFF 0
+	writeDspReg GAIN+CHN3_OFF 0
+
+	writeDspReg SCRN+CHN4_OFF 0
+	writeDspReg VOL_L+CHN4_OFF 0
+	writeDspReg VOL_R+CHN4_OFF 0
+	writeDspReg16 ADSR1+CHN4_OFF 0
+	writeDspReg GAIN+CHN4_OFF 0
+
+	writeDspReg SCRN+CHN5_OFF 0
+	writeDspReg VOL_L+CHN5_OFF 0
+	writeDspReg VOL_R+CHN5_OFF 0
+	writeDspReg16 ADSR1+CHN5_OFF 0
+	writeDspReg GAIN+CHN5_OFF 0
+
+	writeDspReg SCRN+CHN6_OFF 0
+	writeDspReg VOL_L+CHN6_OFF 0
+	writeDspReg VOL_R+CHN6_OFF 0
+	writeDspReg16 ADSR1+CHN6_OFF 0
+	writeDspReg GAIN+CHN6_OFF 0
+
+	writeDspReg SCRN+CHN7_OFF 0
+	writeDspReg VOL_L+CHN7_OFF 0
+	writeDspReg VOL_R+CHN7_OFF 0
+	writeDspReg16 ADSR1+CHN7_OFF 0
+	writeDspReg GAIN+CHN7_OFF 0
+
+	; Disable echo
+	writeDspReg EOV 0
+	; Disable noise
+	writeDspReg NOV 0
+	; Dsiable pitch modulation
+	writeDspReg PMON 0
 
 	; Sound 0 (error)
 	writeDspReg SCRN 0
@@ -166,6 +224,19 @@ main:
 	writeDspReg16 ADSR1+CHN5_OFF $0000
 	writeDspReg GAIN+CHN5_OFF 64
 
+
+	; Silence unused channels
+	writeDspReg SCRN+CHN6_OFF 0
+	writeDspReg VOL_L+CHN6_OFF 0
+	writeDspReg VOL_R+CHN6_OFF 0
+	writeDspReg16 ADSR1+CHN6_OFF 0
+	writeDspReg GAIN+CHN6_OFF 0
+
+	writeDspReg SCRN+CHN7_OFF 0
+	writeDspReg VOL_L+CHN7_OFF 0
+	writeDspReg VOL_R+CHN7_OFF 0
+	writeDspReg16 ADSR1+CHN7_OFF 0
+	writeDspReg GAIN+CHN7_OFF 0
 
 
 @mainloop:
