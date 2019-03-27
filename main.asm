@@ -359,7 +359,6 @@ drawPressB:
 	cursor_setStartingTileID CURSOR_MENU_TILE_ID
 	cursor_setPitch 16 16
 
-
 	popall
 
 	rts
@@ -641,6 +640,8 @@ grid_screen:
 	jsr clock_zero
 	jsr clock_show
 
+	jsr msg_say_good_luck
+
 	; Disable forced blanking (clear bit 7)
 	; Start with master brightness at 0 (black)
 	; for upcoming fade-in
@@ -683,6 +684,8 @@ grid_screen:
 
 	cursor_setStartingTileID CURSOR_HIDDEN_TILE_ID
 
+	jsr msg_say_solving
+
 	jsr easySolver
 	lda cancel_solver
 	bne @solving_cancelled
@@ -690,6 +693,8 @@ grid_screen:
 	jsr bruteForceSolver
 	lda cancel_solver
 	bne @solving_cancelled
+
+	jsr msg_say_done
 
 	stz run_solver
 
@@ -699,6 +704,8 @@ grid_screen:
 	bra @grid_loop
 
 @solving_cancelled:
+	jsr msg_say_cancelled
+
 	stz run_solver
 	cursor_setStartingTileID CURSOR_INGAME_TILE_ID
 	jsr grid_removeBruteForced
@@ -786,6 +793,9 @@ processButtons:
 	jsr getEvents ; returns 16 bits
 
 	jsr cursor_move_by_gamepad
+	bcc @nomove
+	jsr msg_clear ; clear message on cursor movement
+@nomove
 
 	bit #BUTTON_MENU.W
 	bne @menu_button_pressed
@@ -1116,14 +1126,24 @@ proposeHint:
 	XY16
 
 	jsr solver_findSoleCandidate
+	bcs @next1
+	jsr msg_say_sole_canditate
 	bcc @found
 
+@next1:
 	jsr solver_findUniqueRowCandidate
+	bcs @next2
+	jsr msg_say_unique_row_canditate
 	bcc @found
 
+@next2:
 	jsr solver_findUniqueColumnCandidate
+	bcs @next3
+	jsr msg_say_unique_column_canditate
 	bcc @found
 
+@next3:
+	; TODO : unique 3x3 group candidate
 
 	bra @not_found
 
@@ -1157,6 +1177,8 @@ proposeHint:
 
 
 @not_found:
+	jsr msg_say_nothing_easy_found
+
 	jsr sound_effect_error
 	jsr effect_mosaic_pulse
 	; TODO : Message
@@ -1324,6 +1346,8 @@ insertValueAtCursor
 	; Play sound
 	jsr sound_effect_write
 
+	; Clear any lingering message
+	jsr msg_clear
 
 @erasing_value:
 	jsr grid_isEmptyAt
@@ -1336,8 +1360,20 @@ insertValueAtCursor
 
 	bra @done
 
+	; This is not a valid move. Check what was attempted.
 @error:
+	ldx gridarg_value
+	cpx #0
+	beq @error_erasing
 
+@error_inserting:
+	jsr msg_say_cannot_write
+	jsr sound_effect_error
+	jsr effect_mosaic_pulse
+	bra @done
+
+@error_erasing:
+	jsr msg_say_cannot_erase
 	jsr sound_effect_error
 	jsr effect_mosaic_pulse
 

@@ -157,6 +157,8 @@ cursor_jump_to_destination:
 	;
 	; Does not clear the events.
 	;
+	; Returns with carry set if a direction button was used.
+	;
 cursor_move_by_gamepad:
 	pushall
 
@@ -181,9 +183,14 @@ cursor_move_by_gamepad:
 @button_found:
 	jsr (_cursor_dirFuncs, X)
 
+	popall
+	sec
+	rts
+
 @nobutton:
 
 	popall
+	clc
 	rts
 
 _cursor_dirFuncs:

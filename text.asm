@@ -1,5 +1,4 @@
 .include "header.inc"
-;.include "snesregs.inc"
 .include "misc_macros.inc"
 .include "zeropage.inc"
 
