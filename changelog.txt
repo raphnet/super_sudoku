@@ -1,5 +1,6 @@
 2019-03-??: Version 1.0
     - Added message in the box at the bottom of the screen
+	- When selecting a puzzle, start with the pointer in a random position
 
 2019-03-24: Version 0.3
 	- Added sound effects.
