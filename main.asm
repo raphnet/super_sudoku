@@ -6,6 +6,8 @@
 .include "gamepads.inc"
 .include "text.inc"
 .include "cursor.inc"
+.include "bg1.inc"
+.include "bg2.inc"
 
 ; Button definitions
 .define BUTTON_VALIDATE	CTL_WORD0_B ; for making choices in menu
@@ -78,8 +80,6 @@
 .16BIT
 
 .RAMSECTION "main_variables" SLOT RAM_SLOT
-bg2_off: db
-bg2_count: db
 
 grid_changed: db ; When non-zero, causes grid_syncToScreen to be called at vblank
 grid_changed_padding: db
@@ -135,19 +135,7 @@ VBlank:
 	XY8
 
 	; Animate scrolling background
-	lda bg2_count
-	ina
-	sta bg2_count
-	and #$03
-	cmp #$03
-	bne @nomove
-
-	lda bg2_off
-	ina
-	sta bg2_off
-	sta BG2HOFS
-	sta BG2VOFS
-@nomove:
+	jsr bg2_doScrolling
 
 	; Update the global frame counter
 	A16
@@ -218,9 +206,8 @@ Start:
 	LoadVRAM PAT, $2000, (PAT_END-PAT)/2
 	LoadVRAM NUMBER_TILES, $4000, (NUMBER_END-NUMBER_TILES)
 	LoadVRAM SPRITES, $8000, (SPRITES_END-SPRITES)/2
+
 	; Define byte addresse for tile maps
-	.define BG1_TILE_MAP_OFFSET	$3000
-	.define BG2_TILE_MAP_OFFSET	$3800
 	.define BG3_TILE_MAP_OFFSET $6000
 
 	;;;;
@@ -321,10 +308,8 @@ title_screen:
 
 	; BG1
 	jsr bg1_loadTitleMap
-
 	; BG2
-	Fill_VRAM BG2_TILE_MAP_OFFSET ((2<<BGMAPENT_PALSHIFT)|0) 	32*32
-
+	jsr bg2_fill
 	; BG3
 	Fill_VRAM BG3_TILE_MAP_OFFSET ((1<<BGMAPENT_PALSHIFT)|0|$0000) 	32*32
 

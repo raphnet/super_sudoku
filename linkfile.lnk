@@ -10,6 +10,7 @@ cursor.o
 solver.o
 clock.o
 bg1.o
+bg2.o
 sound.o
 messages.o
 random.o

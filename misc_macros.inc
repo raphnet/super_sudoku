@@ -98,10 +98,10 @@
 	A16
 	ldx #\3
 	lda #\2
-ClearVRAM_next\@:
+_ClearVRAM_next\@:
 	sta VMDATAL
 	dex
-	bne ClearVRAM_next\@
+	bne _ClearVRAM_next\@
 
 	plp
 	plx
