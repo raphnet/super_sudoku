@@ -560,6 +560,41 @@ prepare_ask_puzzle_id:
 	cursor_setPitch 40 8
 	cursor_jumpToGridXY 0 0
 
+	; Seen the random number generator with the current frame count
+	lda framecount
+	sta lfsr_state
+
+	; Random value for row
+	jsr lfsr_tick
+	jsr lfsr_tick
+	jsr lfsr_tick
+	jsr lfsr_tick
+	jsr lfsr_tick
+	jsr lfsr_tick
+	xba
+@lp:
+	cmp #20
+	bcc @m
+	sbc #20
+	bra @lp
+@m:
+	sta cursor_grid_y
+
+	; Random value for column
+	jsr lfsr_tick
+	jsr lfsr_tick
+	jsr lfsr_tick
+	xba
+@lp2:
+	cmp #5
+	bcc @n
+	sbc #5
+	bra @lp2
+@n:
+	sta cursor_grid_x
+
+
+
 @select_puzzle_id_lop:
 	wai
 

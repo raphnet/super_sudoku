@@ -12,3 +12,4 @@ clock.o
 bg1.o
 sound.o
 messages.o
+random.o
