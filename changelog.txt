@@ -1,4 +1,4 @@
-2019-03-??: Version 1.0
+2019-03-31: Version 1.0
     - Added message in the box at the bottom of the screen
 	- When selecting a puzzle, start with the pointer in a random position
 
