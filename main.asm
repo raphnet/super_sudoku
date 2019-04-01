@@ -714,8 +714,6 @@ grid_screen:
 	lda cancel_solver
 	bne @solving_cancelled
 
-	jsr msg_say_done
-
 	stz run_solver
 
 	cursor_setStartingTileID CURSOR_INGAME_TILE_ID
@@ -736,6 +734,7 @@ grid_screen:
 	bcc @already_drawn
 
 	jsr sound_effect_solved
+	jsr msg_say_well_done
 
 	jsr clock_stop
 

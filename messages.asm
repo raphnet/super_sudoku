@@ -13,7 +13,8 @@
 _str_good_luck: .db "GOOD LUCK!",0
 _str_solving: .db "SOLVING...",0
 _str_cancelled: .db "CANCELLED",0
-_str_done: .db "WELL DONE!",0
+_str_well_done: .db "WELL DONE!",0
+_str_done: .db "DONE!",0
 _str_cannot_erase: .db "CANNOT ERASE THIS",0
 _str_cannot_write:   .db "CANNOT WRITE THIS HERE",0
 _str_void:                 .db "                           ",0
@@ -54,6 +55,11 @@ msg_say_cancelled:
 msg_say_done:
 	jsr _clear
 	SAY _str_done
+	rts
+
+msg_say_well_done:
+	jsr _clear
+	SAY _str_well_done
 	rts
 
 msg_say_cannot_erase:
