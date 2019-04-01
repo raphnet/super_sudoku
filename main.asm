@@ -577,7 +577,7 @@ prepare_ask_puzzle_id:
 	bra @lp2
 @n:
 	sta cursor_grid_x
-
+	jsr cursor_jump_to_destination
 
 
 @select_puzzle_id_lop:
