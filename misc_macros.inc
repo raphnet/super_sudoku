@@ -238,11 +238,11 @@ skip\@:
 	ldx #\3.W ; count
 	lda #\2 ; value
 	ldy #0.W ; offset
-_MemsetLoop\@\!:
+_MemsetLoop\@:
 	sta \1, y ; Address + Y
 	iny
 	dex
-	bne _MemsetLoop\@\!
+	bne _MemsetLoop\@
 
 	plp
 	ply
