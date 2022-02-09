@@ -1,3 +1,8 @@
+2022-02-09: Version 1.1
+	- Use an opaque background on the grid to (hopefully) avoid eyestrain.
+	- Use less bright colors on the grid also.
+	- Slow down the background scrolling to (hopefully) make it less distracting.
+
 2019-03-31: Version 1.0
     - Added message in the box at the bottom of the screen
 	- When selecting a puzzle, start with the pointer in a random position
