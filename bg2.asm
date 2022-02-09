@@ -9,9 +9,12 @@
 .ramsection "bg2_vars" SLOT RAM_SLOT
 	bg2_off: db
 	bg2_count: db
+	bg2_scrolling: db
 .ends
 
 .16BIT
+
+.define SCROLL_TICK_MASK	$07
 
 .section "bg2_code" FREE
 
@@ -25,12 +28,16 @@ bg2_doScrolling:
 	A8
 	XY8
 
+	lda bg2_scrolling
+	and #$ff
+	beq @nomove
+
 	; Animate scrolling background
 	lda bg2_count
 	ina
 	sta bg2_count
-	and #$03
-	cmp #$03
+	and #SCROLL_TICK_MASK
+	cmp #SCROLL_TICK_MASK
 	bne @nomove
 
 	lda bg2_off
@@ -52,6 +59,26 @@ bg2_fill:
 	popall
 	rts
 
+
+bg2_enableScrolling:
+	pushall
+	A8
+
+	lda #1
+	sta bg2_scrolling
+
+	popall
+	rts
+
+bg2_disableScrolling:
+	pushall
+	A8
+
+	lda #0
+	sta bg2_scrolling
+
+	popall
+	rts
 
 
 

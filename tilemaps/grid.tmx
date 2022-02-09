@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" orientation="orthogonal" renderorder="right-down" width="32" height="28" tilewidth="8" tileheight="8" nextobjectid="1">
+<map version="1.4" tiledversion="1.4.2" orientation="orthogonal" renderorder="right-down" width="32" height="28" tilewidth="8" tileheight="8" infinite="0" nextlayerid="2" nextobjectid="1">
  <tileset firstgid="1" name="font" tilewidth="8" tileheight="8" tilecount="256" columns="16">
   <image source="main.png" width="128" height="128"/>
  </tileset>
- <layer name="Tile Layer 1" width="32" height="28">
+ <layer id="1" name="Tile Layer 1" width="32" height="28">
   <data encoding="csv">
 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-1,206,207,208,211,212,1,214,215,1,217,218,219,1,221,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-1,1,1,1,227,228,229,230,231,232,233,234,235,236,237,238,239,240,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+1,206,207,208,211,212,1,214,215,1,217,218,219,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+1,1,1,1,227,228,229,230,231,232,233,234,235,236,237,1,239,240,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 1,1,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255,256,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 1,5,17,13,17,13,17,22,17,13,17,13,17,22,17,13,17,13,17,4,1,129,135,135,135,135,135,135,135,135,130,1,
 1,6,7,12,7,12,7,29,7,12,7,12,7,29,7,12,7,12,7,25,1,136,85,74,78,70,137,137,137,137,134,1,

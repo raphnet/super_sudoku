@@ -310,6 +310,7 @@ title_screen:
 	jsr bg1_loadTitleMap
 	; BG2
 	jsr bg2_fill
+	jsr bg2_enableScrolling
 	; BG3
 	Fill_VRAM BG3_TILE_MAP_OFFSET ((1<<BGMAPENT_PALSHIFT)|0|$0000) 	32*32
 
@@ -644,6 +645,8 @@ grid_screen:
 
 	; Overwrite the L/R icon for "keypad" when using a NTT Data Keypad
 	jsr patchBG1_for_NTT_icon
+
+;	jsr bg2_disableScrolling
 
 	XY16
 	A16
