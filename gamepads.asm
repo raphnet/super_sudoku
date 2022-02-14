@@ -8,7 +8,7 @@
 
 .ramsection "gamepad vars" bank 0 slot RAM_SLOT
 	; Buffer for reading bytes from controllers. Logic can
-	; look at those to know the current button status. controlerbits.inc
+	; look at those to know the current button status. gamepads.inc
 	; contains defines that can help masking buttons.
 	gamepad1_bytes: dsb 4
 	gamepad2_bytes: dsb 4
